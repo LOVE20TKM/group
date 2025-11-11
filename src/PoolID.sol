@@ -2,6 +2,9 @@
 pragma solidity =0.8.17;
 
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import {
+    ERC721Enumerable
+} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import {IPoolID} from "./interfaces/IPoolID.sol";
 import {ILOVE20Token} from "@core/interfaces/ILOVE20Token.sol";
 
@@ -10,7 +13,7 @@ import {ILOVE20Token} from "@core/interfaces/ILOVE20Token.sol";
  * @notice ERC721-based Pool ID system for LOVE20 ecosystem
  * @dev Each Pool ID represents ownership of a mining pool in the LOVE20 ecosystem
  */
-contract PoolID is ERC721, IPoolID {
+contract PoolID is ERC721Enumerable, IPoolID {
     // ============ Constants ============
 
     uint256 private constant BASE_DIVISOR = 1e8;
@@ -34,9 +37,6 @@ contract PoolID is ERC721, IPoolID {
     constructor(address love20Token_) ERC721("LOVE20 Pool ID", "LPID") {
         if (love20Token_ == address(0)) revert InvalidAddress();
         love20Token = love20Token_;
-
-        // create a nft that no one actually owns
-        _mint(address(this), 0);
     }
 
     // ============ Pool ID Functions ============
@@ -57,7 +57,7 @@ contract PoolID is ERC721, IPoolID {
 
     function _mint(
         address to,
-        string calldata poolName,
+        string memory poolName,
         uint256 mintCost
     ) internal {
         if (bytes(poolName).length == 0) revert PoolNameEmpty();
@@ -148,13 +148,5 @@ contract PoolID is ERC721, IPoolID {
         string calldata poolName
     ) external view returns (uint256) {
         return _poolNameToTokenId[poolName];
-    }
-
-    /**
-     * @notice Get total supply of pool IDs
-     * @return The total number of pool IDs minted
-     */
-    function totalSupply() external view returns (uint256) {
-        return _nextTokenId - 1;
     }
 }

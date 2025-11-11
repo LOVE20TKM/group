@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.17;
 
-import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import {
+    IERC721Enumerable
+} from "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
 import {
     IERC721Metadata
 } from "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
@@ -22,7 +24,12 @@ interface IPoolIDErrors {
     error PoolNameEmpty();
 }
 
-interface IPoolID is IERC721, IERC721Metadata, IPoolIDEvents, IPoolIDErrors {
+interface IPoolID is
+    IERC721Metadata,
+    IERC721Enumerable,
+    IPoolIDEvents,
+    IPoolIDErrors
+{
     // Mint a new pool ID with the given pool name
     function mint(string calldata poolName) external returns (uint256 tokenId);
 
@@ -46,7 +53,4 @@ interface IPoolID is IERC721, IERC721Metadata, IPoolIDEvents, IPoolIDErrors {
 
     // Get the LOVE20 token address
     function love20Token() external view returns (address);
-
-    // Get total supply of pool IDs
-    function totalSupply() external view returns (uint256);
 }
