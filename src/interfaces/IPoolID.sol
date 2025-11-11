@@ -22,6 +22,7 @@ interface IPoolIDErrors {
     error InvalidAddress();
     error PoolNameAlreadyExists();
     error PoolNameEmpty();
+    error InvalidPoolName();
 }
 
 interface IPoolID is

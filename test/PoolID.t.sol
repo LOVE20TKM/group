@@ -169,6 +169,145 @@ contract PoolIDTest is Test {
         vm.stopPrank();
     }
 
+    function testCannotMintWithLeadingWhitespace() public {
+        string memory poolName = " LeadingSpace";
+
+        vm.startPrank(user1);
+        vm.expectRevert(IPoolIDErrors.InvalidPoolName.selector);
+        poolID.mint(poolName);
+        vm.stopPrank();
+    }
+
+    function testCannotMintWithTrailingWhitespace() public {
+        string memory poolName = "TrailingSpace ";
+
+        vm.startPrank(user1);
+        vm.expectRevert(IPoolIDErrors.InvalidPoolName.selector);
+        poolID.mint(poolName);
+        vm.stopPrank();
+    }
+
+    function testCannotMintWithControlCharacters() public {
+        // Test newline character
+        string memory poolNameWithNewline = "Pool\nName";
+
+        vm.startPrank(user1);
+        vm.expectRevert(IPoolIDErrors.InvalidPoolName.selector);
+        poolID.mint(poolNameWithNewline);
+        vm.stopPrank();
+    }
+
+    function testCannotMintWithTabCharacter() public {
+        // Test tab character
+        string memory poolNameWithTab = "Pool\tName";
+
+        vm.startPrank(user1);
+        vm.expectRevert(IPoolIDErrors.InvalidPoolName.selector);
+        poolID.mint(poolNameWithTab);
+        vm.stopPrank();
+    }
+
+    function testCannotMintWithTooLongName() public {
+        // Create a name longer than 64 characters
+        string
+            memory poolName = "ThisIsAVeryLongPoolNameThatExceedsSixtyFourCharactersInLengthAndShouldBeRejected";
+
+        vm.startPrank(user1);
+        vm.expectRevert(IPoolIDErrors.InvalidPoolName.selector);
+        poolID.mint(poolName);
+        vm.stopPrank();
+    }
+
+    function testCannotMintWithZeroWidthSpace() public {
+        // Zero Width Space (U+200B) - UTF-8: 0xE2 0x80 0x8B
+        string memory poolName = unicode"Pool\u200BName";
+
+        vm.startPrank(user1);
+        vm.expectRevert(IPoolIDErrors.InvalidPoolName.selector);
+        poolID.mint(poolName);
+        vm.stopPrank();
+    }
+
+    function testCannotMintWithZeroWidthNonJoiner() public {
+        // Zero Width Non-Joiner (U+200C) - UTF-8: 0xE2 0x80 0x8C
+        string memory poolName = unicode"Pool\u200CName";
+
+        vm.startPrank(user1);
+        vm.expectRevert(IPoolIDErrors.InvalidPoolName.selector);
+        poolID.mint(poolName);
+        vm.stopPrank();
+    }
+
+    function testCannotMintWithZeroWidthJoiner() public {
+        // Zero Width Joiner (U+200D) - UTF-8: 0xE2 0x80 0x8D
+        string memory poolName = unicode"Pool\u200DName";
+
+        vm.startPrank(user1);
+        vm.expectRevert(IPoolIDErrors.InvalidPoolName.selector);
+        poolID.mint(poolName);
+        vm.stopPrank();
+    }
+
+    function testCannotMintWithLeftToRightMark() public {
+        // Left-to-Right Mark (U+200E) - UTF-8: 0xE2 0x80 0x8E
+        string memory poolName = unicode"Pool\u200EName";
+
+        vm.startPrank(user1);
+        vm.expectRevert(IPoolIDErrors.InvalidPoolName.selector);
+        poolID.mint(poolName);
+        vm.stopPrank();
+    }
+
+    function testCannotMintWithRightToLeftMark() public {
+        // Right-to-Left Mark (U+200F) - UTF-8: 0xE2 0x80 0x8F
+        string memory poolName = unicode"Pool\u200FName";
+
+        vm.startPrank(user1);
+        vm.expectRevert(IPoolIDErrors.InvalidPoolName.selector);
+        poolID.mint(poolName);
+        vm.stopPrank();
+    }
+
+    function testCannotMintWithSoftHyphen() public {
+        // Soft Hyphen (U+00AD) - UTF-8: 0xC2 0xAD
+        string memory poolName = unicode"Pool\u00ADName";
+
+        vm.startPrank(user1);
+        vm.expectRevert(IPoolIDErrors.InvalidPoolName.selector);
+        poolID.mint(poolName);
+        vm.stopPrank();
+    }
+
+    function testCannotMintWithBOM() public {
+        // Zero Width No-Break Space / BOM (U+FEFF) - UTF-8: 0xEF 0xBB 0xBF
+        string memory poolName = unicode"\uFEFFPoolName";
+
+        vm.startPrank(user1);
+        vm.expectRevert(IPoolIDErrors.InvalidPoolName.selector);
+        poolID.mint(poolName);
+        vm.stopPrank();
+    }
+
+    function testCannotMintWithWordJoiner() public {
+        // Word Joiner (U+2060) - UTF-8: 0xE2 0x81 0xA0
+        string memory poolName = unicode"Pool\u2060Name";
+
+        vm.startPrank(user1);
+        vm.expectRevert(IPoolIDErrors.InvalidPoolName.selector);
+        poolID.mint(poolName);
+        vm.stopPrank();
+    }
+
+    function testCannotMintWithCombiningGraphemeJoiner() public {
+        // Combining Grapheme Joiner (U+034F) - UTF-8: 0xCD 0x8F
+        string memory poolName = unicode"Pool\u034FName";
+
+        vm.startPrank(user1);
+        vm.expectRevert(IPoolIDErrors.InvalidPoolName.selector);
+        poolID.mint(poolName);
+        vm.stopPrank();
+    }
+
     function testCannotMintDuplicateName() public {
         string memory poolName = "TestPool";
         uint256 mintCost = poolID.calculateMintCost(poolName);
@@ -211,10 +350,12 @@ contract PoolIDTest is Test {
         assertTrue(poolID.isPoolNameUsed(poolName));
     }
 
-    function testMintWithLongName() public {
-        // Test with a very long pool name (100 bytes)
+    function testMintWith63ByteName() public {
+        // Test with a 63-byte pool name (just under the limit)
         string
-            memory poolName = "ThisIsAVeryLongPoolNameThatContainsMoreThan100CharactersToTestTheBehaviorOfTheContractWhenHandling";
+            memory poolName = "123456789012345678901234567890123456789012345678901234567890123";
+        assertEq(bytes(poolName).length, 63);
+
         uint256 mintCost = poolID.calculateMintCost(poolName);
 
         vm.startPrank(user1);
@@ -228,6 +369,36 @@ contract PoolIDTest is Test {
 
     function testMintWithUnicodeCharacters() public {
         string memory poolName = unicode"Pool池名";
+        uint256 mintCost = poolID.calculateMintCost(poolName);
+
+        vm.startPrank(user1);
+        love20Token.approve(address(poolID), mintCost);
+        uint256 tokenId = poolID.mint(poolName);
+        vm.stopPrank();
+
+        assertEq(poolID.poolNameOf(tokenId), poolName);
+    }
+
+    function testMintWithMaxLengthName() public {
+        // Test with maximum allowed length (64 characters)
+        string
+            memory poolName = "1234567890123456789012345678901234567890123456789012345678901234";
+        assertEq(bytes(poolName).length, 64);
+
+        uint256 mintCost = poolID.calculateMintCost(poolName);
+
+        vm.startPrank(user1);
+        love20Token.approve(address(poolID), mintCost);
+        uint256 tokenId = poolID.mint(poolName);
+        vm.stopPrank();
+
+        assertEq(poolID.poolNameOf(tokenId), poolName);
+        assertEq(poolID.tokenIdOf(poolName), tokenId);
+    }
+
+    function testMintWithInternalSpaces() public {
+        // Internal spaces should be allowed
+        string memory poolName = "Pool Name With Spaces";
         uint256 mintCost = poolID.calculateMintCost(poolName);
 
         vm.startPrank(user1);
