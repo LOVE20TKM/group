@@ -2,7 +2,7 @@
 
 # LOVE20 Token Address (required)
 # This is the token used for minting Pool IDs
-LOVE20_TOKEN_ADDRESS=
+LOVE20_TOKEN_ADDRESS=0x75537828f2ce51be7289709686A69CbFDbB714F1
 
 # ===== PoolID Contract Parameters =====
 
