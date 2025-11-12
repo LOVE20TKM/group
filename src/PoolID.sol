@@ -161,7 +161,7 @@ contract PoolID is ERC721Enumerable, IPoolID {
      *
      * Validation rules:
      * - Length must be between 1 and 64 bytes (UTF-8 encoded)
-     * - No leading or trailing whitespace
+     * - No whitespace characters (including spaces)
      * - No C0 control characters (0x00-0x1F)
      * - No DEL character (0x7F)
      * - No zero-width characters (U+200B-U+200F, U+034F, U+FEFF, U+2060, U+00AD)
@@ -181,17 +181,12 @@ contract PoolID is ERC721Enumerable, IPoolID {
             return false;
         }
 
-        // Check for leading or trailing whitespace (0x20)
-        if (nameBytes[0] == 0x20 || nameBytes[len - 1] == 0x20) {
-            return false;
-        }
-
         // Check each byte for invalid characters
         for (uint256 i = 0; i < len; i++) {
             uint8 byteValue = uint8(nameBytes[i]);
 
-            // Reject C0 control characters (0x00-0x1F)
-            if (byteValue < 0x20) {
+            // Reject C0 control characters (0x00-0x1F) including space
+            if (byteValue <= 0x20) {
                 return false;
             }
 

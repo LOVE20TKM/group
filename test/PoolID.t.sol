@@ -396,17 +396,14 @@ contract PoolIDTest is Test {
         assertEq(poolID.tokenIdOf(poolName), tokenId);
     }
 
-    function testMintWithInternalSpaces() public {
-        // Internal spaces should be allowed
-        string memory poolName = "Pool Name With Spaces";
-        uint256 mintCost = poolID.calculateMintCost(poolName);
+    function testCannotMintWithInternalSpaces() public {
+        // Internal spaces should NOT be allowed
+        string memory poolName = "Pool Name";
 
         vm.startPrank(user1);
-        love20Token.approve(address(poolID), mintCost);
-        uint256 tokenId = poolID.mint(poolName);
+        vm.expectRevert(IPoolIDErrors.InvalidPoolName.selector);
+        poolID.mint(poolName);
         vm.stopPrank();
-
-        assertEq(poolID.poolNameOf(tokenId), poolName);
     }
 
     function testMintEmitsEvent() public {
