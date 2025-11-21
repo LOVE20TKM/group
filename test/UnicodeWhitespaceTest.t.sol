@@ -215,4 +215,100 @@ contract UnicodeWhitespaceTest is Test {
         group.mint(groupName);
         vm.stopPrank();
     }
+
+    // ============ Line/Paragraph Separator Tests ============
+
+    function testCannotMintWithLineSeparator() public {
+        // U+2028 - Line Separator
+        string memory groupName = unicode"Group\u2028Name";
+
+        vm.startPrank(user1);
+        vm.expectRevert(ILOVE20GroupErrors.InvalidGroupName.selector);
+        group.mint(groupName);
+        vm.stopPrank();
+    }
+
+    function testCannotMintWithParagraphSeparator() public {
+        // U+2029 - Paragraph Separator
+        string memory groupName = unicode"Group\u2029Name";
+
+        vm.startPrank(user1);
+        vm.expectRevert(ILOVE20GroupErrors.InvalidGroupName.selector);
+        group.mint(groupName);
+        vm.stopPrank();
+    }
+
+    // ============ Directional Formatting Tests ============
+
+    function testCannotMintWithArabicLetterMark() public {
+        // U+061C - Arabic Letter Mark
+        string memory groupName = unicode"Group\u061CName";
+
+        vm.startPrank(user1);
+        vm.expectRevert(ILOVE20GroupErrors.InvalidGroupName.selector);
+        group.mint(groupName);
+        vm.stopPrank();
+    }
+
+    function testCannotMintWithLeftToRightEmbedding() public {
+        // U+202A - Left-to-Right Embedding
+        string memory groupName = unicode"Group\u202AName";
+
+        vm.startPrank(user1);
+        vm.expectRevert(ILOVE20GroupErrors.InvalidGroupName.selector);
+        group.mint(groupName);
+        vm.stopPrank();
+    }
+
+    function testCannotMintWithRightToLeftEmbedding() public {
+        // U+202B - Right-to-Left Embedding
+        string memory groupName = unicode"Group\u202BName";
+
+        vm.startPrank(user1);
+        vm.expectRevert(ILOVE20GroupErrors.InvalidGroupName.selector);
+        group.mint(groupName);
+        vm.stopPrank();
+    }
+
+    function testCannotMintWithPopDirectionalFormatting() public {
+        // U+202C - Pop Directional Formatting
+        string memory groupName = unicode"Group\u202CName";
+
+        vm.startPrank(user1);
+        vm.expectRevert(ILOVE20GroupErrors.InvalidGroupName.selector);
+        group.mint(groupName);
+        vm.stopPrank();
+    }
+
+    function testCannotMintWithLeftToRightOverride() public {
+        // U+202D - Left-to-Right Override
+        string memory groupName = unicode"Group\u202DName";
+
+        vm.startPrank(user1);
+        vm.expectRevert(ILOVE20GroupErrors.InvalidGroupName.selector);
+        group.mint(groupName);
+        vm.stopPrank();
+    }
+
+    function testCannotMintWithRightToLeftOverride() public {
+        // U+202E - Right-to-Left Override
+        string memory groupName = unicode"Group\u202EName";
+
+        vm.startPrank(user1);
+        vm.expectRevert(ILOVE20GroupErrors.InvalidGroupName.selector);
+        group.mint(groupName);
+        vm.stopPrank();
+    }
+
+    // ============ C1 Control Character Test ============
+
+    function testCannotMintWithC1ControlCharacter() public {
+        // U+0080 - C1 control character (first one in range)
+        string memory groupName = unicode"Group\u0080Name";
+
+        vm.startPrank(user1);
+        vm.expectRevert(ILOVE20GroupErrors.InvalidGroupName.selector);
+        group.mint(groupName);
+        vm.stopPrank();
+    }
 }

@@ -189,9 +189,12 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
      *
      * Validation rules:
      * - Length must be between 1 and 64 bytes (UTF-8 encoded)
+     * - Must be valid UTF-8 encoding
      * - No ASCII whitespace (0x20) or control characters (0x00-0x1F, 0x7F)
      * - No Unicode whitespace characters (U+00A0, U+1680, U+2000-U+200A, U+202F, U+205F, U+3000)
      * - No zero-width characters (U+200B-U+200F, U+034F, U+FEFF, U+2060, U+00AD)
+     * - No line/paragraph separators (U+2028, U+2029)
+     * - No directional formatting (U+061C, U+202A-U+202E)
      * - Supports UTF-8 encoded characters including Unicode
      *
      * Note: We check byte length, not character count. A single Unicode
@@ -208,8 +211,9 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
             return false;
         }
 
-        // Check each byte for invalid characters
-        for (uint256 i = 0; i < len; i++) {
+        // Validate UTF-8 encoding and check for invalid characters
+        uint256 i = 0;
+        while (i < len) {
             uint8 byteValue = uint8(nameBytes[i]);
 
             // Reject C0 control characters (0x00-0x1F) and space (0x20)
@@ -222,11 +226,101 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
                 return false;
             }
 
-            // Check for multi-byte Unicode whitespace and zero-width characters
-            if (i + 2 < len) {
+            // ASCII range (0x21-0x7E): valid single-byte character
+            if (byteValue < 0x80) {
+                i++;
+                continue;
+            }
+
+            // Multi-byte UTF-8 sequence validation
+            uint8 numBytes = 0;
+
+            // Determine expected sequence length based on first byte
+            if (byteValue >= 0xC2 && byteValue <= 0xDF) {
+                // 2-byte sequence: 110xxxxx 10xxxxxx
+                numBytes = 2;
+            } else if (byteValue >= 0xE0 && byteValue <= 0xEF) {
+                // 3-byte sequence: 1110xxxx 10xxxxxx 10xxxxxx
+                numBytes = 3;
+            } else if (byteValue >= 0xF0 && byteValue <= 0xF4) {
+                // 4-byte sequence: 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
+                numBytes = 4;
+            } else {
+                // Invalid UTF-8 start byte (0x80-0xC1, 0xF5-0xFF)
+                return false;
+            }
+
+            // Check if there are enough remaining bytes
+            if (i + numBytes > len) {
+                return false;
+            }
+
+            // Validate continuation bytes and check for forbidden sequences
+            for (uint256 j = 1; j < numBytes; j++) {
+                uint8 contByte = uint8(nameBytes[i + j]);
+
+                // All continuation bytes must be in range 0x80-0xBF
+                if (contByte < 0x80 || contByte > 0xBF) {
+                    return false;
+                }
+            }
+
+            // Validate continuation bytes and check for forbidden sequences
+            for (uint256 j = 1; j < numBytes; j++) {
+                uint8 contByte = uint8(nameBytes[i + j]);
+
+                // All continuation bytes must be in range 0x80-0xBF
+                if (contByte < 0x80 || contByte > 0xBF) {
+                    return false;
+                }
+            }
+
+            // Now check for forbidden Unicode characters
+            if (numBytes == 2) {
+                uint8 byte1 = uint8(nameBytes[i]);
+                uint8 byte2 = uint8(nameBytes[i + 1]);
+
+                // Check for U+00A0 (No-Break Space)
+                // UTF-8: 0xC2 0xA0
+                if (byte1 == 0xC2 && byte2 == 0xA0) {
+                    return false;
+                }
+
+                // Check for U+00AD (Soft Hyphen)
+                // UTF-8: 0xC2 0xAD
+                if (byte1 == 0xC2 && byte2 == 0xAD) {
+                    return false;
+                }
+
+                // Check for C1 control characters (0x80-0x9F)
+                // UTF-8: 0xC2 0x80-0x9F
+                if (byte1 == 0xC2 && byte2 >= 0x80 && byte2 <= 0x9F) {
+                    return false;
+                }
+
+                // Check for U+034F (Combining Grapheme Joiner)
+                // UTF-8: 0xCD 0x8F
+                if (byte1 == 0xCD && byte2 == 0x8F) {
+                    return false;
+                }
+
+                // Check for U+061C (Arabic Letter Mark)
+                // UTF-8: 0xD8 0x9C
+                if (byte1 == 0xD8 && byte2 == 0x9C) {
+                    return false;
+                }
+            }
+
+            if (numBytes == 3) {
                 uint8 byte1 = uint8(nameBytes[i]);
                 uint8 byte2 = uint8(nameBytes[i + 1]);
                 uint8 byte3 = uint8(nameBytes[i + 2]);
+
+                // Check for U+1680 (Ogham Space Mark)
+                // UTF-8: 0xE1 0x9A 0x80
+                if (byte1 == 0xE1 && byte2 == 0x9A && byte3 == 0x80) {
+                    return false;
+                }
 
                 // Check for U+2000 to U+200F (Various spaces, zero-width chars, LRM, RLM)
                 // UTF-8: 0xE2 0x80 0x80-0x8F
@@ -235,6 +329,29 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
                     byte2 == 0x80 &&
                     byte3 >= 0x80 &&
                     byte3 <= 0x8F
+                ) {
+                    return false;
+                }
+
+                // Check for U+2028 (Line Separator)
+                // UTF-8: 0xE2 0x80 0xA8
+                if (byte1 == 0xE2 && byte2 == 0x80 && byte3 == 0xA8) {
+                    return false;
+                }
+
+                // Check for U+2029 (Paragraph Separator)
+                // UTF-8: 0xE2 0x80 0xA9
+                if (byte1 == 0xE2 && byte2 == 0x80 && byte3 == 0xA9) {
+                    return false;
+                }
+
+                // Check for U+202A-U+202E (Directional formatting characters)
+                // UTF-8: 0xE2 0x80 0xAA-0xAE
+                if (
+                    byte1 == 0xE2 &&
+                    byte2 == 0x80 &&
+                    byte3 >= 0xAA &&
+                    byte3 <= 0xAE
                 ) {
                     return false;
                 }
@@ -268,40 +385,37 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
                 if (byte1 == 0xEF && byte2 == 0xBB && byte3 == 0xBF) {
                     return false;
                 }
+
+                // Additional validation for 3-byte sequences
+                // Reject overlong encodings and invalid ranges
+                if (byte1 == 0xE0 && byte2 < 0xA0) {
+                    // Overlong encoding
+                    return false;
+                }
+                if (byte1 == 0xED && byte2 >= 0xA0) {
+                    // UTF-16 surrogates (U+D800 to U+DFFF are invalid in UTF-8)
+                    return false;
+                }
             }
 
-            // Check for 2-byte Unicode whitespace and zero-width characters
-            if (i + 1 < len) {
+            if (numBytes == 4) {
                 uint8 byte1 = uint8(nameBytes[i]);
                 uint8 byte2 = uint8(nameBytes[i + 1]);
 
-                // Check for U+00A0 (No-Break Space)
-                // UTF-8: 0xC2 0xA0
-                if (byte1 == 0xC2 && byte2 == 0xA0) {
+                // Additional validation for 4-byte sequences
+                // Reject overlong encodings and code points > U+10FFFF
+                if (byte1 == 0xF0 && byte2 < 0x90) {
+                    // Overlong encoding
                     return false;
                 }
-
-                // Check for U+00AD (Soft Hyphen)
-                // UTF-8: 0xC2 0xAD
-                if (byte1 == 0xC2 && byte2 == 0xAD) {
+                if (byte1 == 0xF4 && byte2 >= 0x90) {
+                    // Code point > U+10FFFF
                     return false;
-                }
-
-                // Check for U+034F (Combining Grapheme Joiner)
-                // UTF-8: 0xCD 0x8F
-                if (byte1 == 0xCD && byte2 == 0x8F) {
-                    return false;
-                }
-
-                // Check for U+1680 (Ogham Space Mark)
-                // UTF-8: 0xE1 0x9A 0x80
-                // Note: This is actually 3 bytes, but checking first 2 bytes here
-                if (byte1 == 0xE1 && byte2 == 0x9A) {
-                    if (i + 2 < len && uint8(nameBytes[i + 2]) == 0x80) {
-                        return false;
-                    }
                 }
             }
+
+            // Move to next character
+            i += numBytes;
         }
 
         return true;
