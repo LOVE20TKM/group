@@ -158,26 +158,26 @@ contract LOVE20GroupTest is Test {
         string memory groupName1 = "FirstGroupName";
         string memory groupName2 = "SecondGroupName";
 
-        uint256 mintCost1 = groupID.calculateMintCost(groupName1);
-        uint256 mintCost2 = groupID.calculateMintCost(groupName2);
+        uint256 mintCost1 = group.calculateMintCost(groupName1);
+        uint256 mintCost2 = group.calculateMintCost(groupName2);
 
         // User1 mints first group
         vm.startPrank(user1);
-        love20Token.approve(address(groupID), mintCost1);
-        uint256 tokenId1 = groupID.mint(groupName1);
+        love20Token.approve(address(group), mintCost1);
+        uint256 tokenId1 = group.mint(groupName1);
         vm.stopPrank();
 
         // User2 mints second group
         vm.startPrank(user2);
-        love20Token.approve(address(groupID), mintCost2);
-        uint256 tokenId2 = groupID.mint(groupName2);
+        love20Token.approve(address(group), mintCost2);
+        uint256 tokenId2 = group.mint(groupName2);
         vm.stopPrank();
 
         assertEq(tokenId1, 1);
         assertEq(tokenId2, 2);
         assertEq(group.totalSupply(), 2);
-        assertEq(groupID.ownerOf(tokenId1), user1);
-        assertEq(groupID.ownerOf(tokenId2), user2);
+        assertEq(group.ownerOf(tokenId1), user1);
+        assertEq(group.ownerOf(tokenId2), user2);
     }
 
     function testCannotMintWithEmptyName() public {
@@ -211,7 +211,7 @@ contract LOVE20GroupTest is Test {
 
         vm.startPrank(user1);
         vm.expectRevert(ILOVE20GroupErrors.InvalidGroupName.selector);
-        groupID.mint(groupNameWithNewline);
+        group.mint(groupNameWithNewline);
         vm.stopPrank();
     }
 
@@ -221,7 +221,7 @@ contract LOVE20GroupTest is Test {
 
         vm.startPrank(user1);
         vm.expectRevert(ILOVE20GroupErrors.InvalidGroupName.selector);
-        groupID.mint(groupNameWithTab);
+        group.mint(groupNameWithTab);
         vm.stopPrank();
     }
 
@@ -332,13 +332,13 @@ contract LOVE20GroupTest is Test {
 
         // First mint succeeds
         vm.startPrank(user1);
-        love20Token.approve(address(groupID), mintCost);
+        love20Token.approve(address(group), mintCost);
         group.mint(groupName);
         vm.stopPrank();
 
         // Second mint with same name fails
         vm.startPrank(user2);
-        love20Token.approve(address(groupID), mintCost);
+        love20Token.approve(address(group), mintCost);
         vm.expectRevert(ILOVE20GroupErrors.GroupNameAlreadyExists.selector);
         group.mint(groupName);
         vm.stopPrank();
@@ -349,7 +349,7 @@ contract LOVE20GroupTest is Test {
         uint256 mintCost = group.calculateMintCost(groupName);
 
         vm.startPrank(user1);
-        love20Token.approve(address(groupID), mintCost - 1); // Approve less than needed
+        love20Token.approve(address(group), mintCost - 1); // Approve less than needed
         vm.expectRevert();
         group.mint(groupName);
         vm.stopPrank();
@@ -431,7 +431,7 @@ contract LOVE20GroupTest is Test {
         uint256 expectedTokenId = 1;
 
         vm.startPrank(user1);
-        love20Token.approve(address(groupID), mintCost);
+        love20Token.approve(address(group), mintCost);
 
         // Expect the GroupMinted event
         vm.expectEmit(true, true, false, true, address(group));
@@ -456,7 +456,7 @@ contract LOVE20GroupTest is Test {
         uint256 user1BalanceBefore = love20Token.balanceOf(user1);
 
         vm.startPrank(user1);
-        love20Token.approve(address(groupID), mintCost);
+        love20Token.approve(address(group), mintCost);
         group.mint(groupName);
         vm.stopPrank();
 
@@ -560,9 +560,9 @@ contract LOVE20GroupTest is Test {
         string memory groupName2 = "LongGroup2";
         string memory groupName3 = "LongGroup3";
 
-        uint256 mintCost1 = groupID.calculateMintCost(groupName1);
-        uint256 mintCost2 = groupID.calculateMintCost(groupName2);
-        uint256 mintCost3 = groupID.calculateMintCost(groupName3);
+        uint256 mintCost1 = group.calculateMintCost(groupName1);
+        uint256 mintCost2 = group.calculateMintCost(groupName2);
+        uint256 mintCost3 = group.calculateMintCost(groupName3);
 
         // Ensure users have enough tokens
         love20Token.mint(user1, mintCost1 + mintCost2);
@@ -592,9 +592,9 @@ contract LOVE20GroupTest is Test {
         string memory groupName2 = "LongGroupB";
         string memory groupName3 = "LongGroupC";
 
-        uint256 mintCost1 = groupID.calculateMintCost(groupName1);
-        uint256 mintCost2 = groupID.calculateMintCost(groupName2);
-        uint256 mintCost3 = groupID.calculateMintCost(groupName3);
+        uint256 mintCost1 = group.calculateMintCost(groupName1);
+        uint256 mintCost2 = group.calculateMintCost(groupName2);
+        uint256 mintCost3 = group.calculateMintCost(groupName3);
 
         // Ensure users have enough tokens
         love20Token.mint(user1, mintCost1 + mintCost2);
@@ -677,24 +677,24 @@ contract LOVE20GroupTest is Test {
         string memory groupName1 = "User1Group";
         string memory groupName2 = "User2Group";
 
-        uint256 mintCost1 = groupID.calculateMintCost(groupName1);
-        uint256 mintCost2 = groupID.calculateMintCost(groupName2);
+        uint256 mintCost1 = group.calculateMintCost(groupName1);
+        uint256 mintCost2 = group.calculateMintCost(groupName2);
 
         // User1 mints
         vm.startPrank(user1);
-        love20Token.approve(address(groupID), mintCost1);
-        uint256 tokenId1 = groupID.mint(groupName1);
+        love20Token.approve(address(group), mintCost1);
+        uint256 tokenId1 = group.mint(groupName1);
         vm.stopPrank();
 
         // User2 mints
         vm.startPrank(user2);
-        love20Token.approve(address(groupID), mintCost2);
-        uint256 tokenId2 = groupID.mint(groupName2);
+        love20Token.approve(address(group), mintCost2);
+        uint256 tokenId2 = group.mint(groupName2);
         vm.stopPrank();
 
         // Verify ownership and token IDs
-        assertEq(groupID.ownerOf(tokenId1), user1);
-        assertEq(groupID.ownerOf(tokenId2), user2);
+        assertEq(group.ownerOf(tokenId1), user1);
+        assertEq(group.ownerOf(tokenId2), user2);
         assertEq(tokenId1, 1);
         assertEq(tokenId2, 2);
         assertEq(group.totalSupply(), 2);
