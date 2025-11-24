@@ -4,8 +4,7 @@ out = "out"
 libs = ["lib"]
 solc = "0.8.17"
 remappings = [
-    "@core/=lib/core/src/",
-    "@openzeppelin/=lib/core/lib/openzeppelin-contracts/"
+    "@openzeppelin/=lib/openzeppelin-contracts/"
 ]
 
 # File system permissions for deployment scripts

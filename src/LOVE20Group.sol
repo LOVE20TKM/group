@@ -6,7 +6,7 @@ import {
     ERC721Enumerable
 } from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import {ILOVE20Group} from "./interfaces/ILOVE20Group.sol";
-import {ILOVE20Token} from "@core/interfaces/ILOVE20Token.sol";
+import {ILOVE20Token} from "./interfaces/ILOVE20Token.sol";
 
 /**
  * @title LOVE20Group
