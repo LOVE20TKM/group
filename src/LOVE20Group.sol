@@ -97,11 +97,9 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
         _groupNameToTokenId[groupName] = tokenId;
 
         if (mintCost > 0) {
-            ILOVE20Token(love20Token).transferFrom(
-                msg.sender,
-                address(this),
-                mintCost
-            );
+            ILOVE20Token token = ILOVE20Token(love20Token);
+            token.transferFrom(msg.sender, address(this), mintCost);
+            token.burn(mintCost);
         }
 
         emit GroupMinted(tokenId, msg.sender, groupName, mintCost);

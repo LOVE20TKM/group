@@ -159,13 +159,15 @@ contract LOVE20GroupTest is Test {
         string memory groupName2 = "SecondGroupName";
 
         uint256 mintCost1 = group.calculateMintCost(groupName1);
-        uint256 mintCost2 = group.calculateMintCost(groupName2);
 
         // User1 mints first group
         vm.startPrank(user1);
         love20Token.approve(address(group), mintCost1);
         uint256 tokenId1 = group.mint(groupName1);
         vm.stopPrank();
+
+        // Calculate cost AFTER first mint (cost increases due to burn)
+        uint256 mintCost2 = group.calculateMintCost(groupName2);
 
         // User2 mints second group
         vm.startPrank(user2);
@@ -449,22 +451,23 @@ contract LOVE20GroupTest is Test {
         uint256 mintCost
     );
 
-    function testMintTransfersTokensToContract() public {
-        string memory groupName = "TokenTransferTest";
+    function testMintBurnsTokens() public {
+        string memory groupName = "TokenBurnTest";
         uint256 mintCost = group.calculateMintCost(groupName);
-        uint256 balanceBefore = love20Token.balanceOf(address(group));
         uint256 user1BalanceBefore = love20Token.balanceOf(user1);
+        uint256 totalSupplyBefore = love20Token.totalSupply();
 
         vm.startPrank(user1);
         love20Token.approve(address(group), mintCost);
         group.mint(groupName);
         vm.stopPrank();
 
-        assertEq(
-            love20Token.balanceOf(address(group)),
-            balanceBefore + mintCost
-        );
+        // Tokens should be burned, not held by contract
+        assertEq(love20Token.balanceOf(address(group)), 0);
+        // User's balance should decrease by mintCost
         assertEq(love20Token.balanceOf(user1), user1BalanceBefore - mintCost);
+        // Total supply should decrease by mintCost (burned)
+        assertEq(love20Token.totalSupply(), totalSupplyBefore - mintCost);
     }
 
     // ============ Transfer Tests ============
@@ -678,13 +681,15 @@ contract LOVE20GroupTest is Test {
         string memory groupName2 = "User2Group";
 
         uint256 mintCost1 = group.calculateMintCost(groupName1);
-        uint256 mintCost2 = group.calculateMintCost(groupName2);
 
         // User1 mints
         vm.startPrank(user1);
         love20Token.approve(address(group), mintCost1);
         uint256 tokenId1 = group.mint(groupName1);
         vm.stopPrank();
+
+        // Calculate cost AFTER first mint (cost increases due to burn)
+        uint256 mintCost2 = group.calculateMintCost(groupName2);
 
         // User2 mints
         vm.startPrank(user2);

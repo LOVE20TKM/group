@@ -159,13 +159,15 @@ contract LOVE20GroupTest is Test {
         string memory groupName2 = "SecondGroupName";
 
         uint256 mintCost1 = group.calculateMintCost(groupName1);
-        uint256 mintCost2 = group.calculateMintCost(groupName2);
 
         // User1 mints first group
         vm.startPrank(user1);
         love20Token.approve(address(group), mintCost1);
         uint256 tokenId1 = group.mint(groupName1);
         vm.stopPrank();
+
+        // Calculate cost AFTER first mint (cost increases due to burn)
+        uint256 mintCost2 = group.calculateMintCost(groupName2);
 
         // User2 mints second group
         vm.startPrank(user2);
@@ -449,22 +451,102 @@ contract LOVE20GroupTest is Test {
         uint256 mintCost
     );
 
-    function testMintTransfersTokensToContract() public {
-        string memory groupName = "TokenTransferTest";
+    function testMintBurnsTokens() public {
+        string memory groupName = "TokenBurnTest";
         uint256 mintCost = group.calculateMintCost(groupName);
-        uint256 balanceBefore = love20Token.balanceOf(address(group));
         uint256 user1BalanceBefore = love20Token.balanceOf(user1);
+        uint256 totalSupplyBefore = love20Token.totalSupply();
 
         vm.startPrank(user1);
         love20Token.approve(address(group), mintCost);
         group.mint(groupName);
         vm.stopPrank();
 
-        assertEq(
-            love20Token.balanceOf(address(group)),
-            balanceBefore + mintCost
-        );
+        // Tokens should be burned, not held by contract
+        assertEq(love20Token.balanceOf(address(group)), 0);
+        // User's balance should decrease by mintCost
         assertEq(love20Token.balanceOf(user1), user1BalanceBefore - mintCost);
+        // Total supply should decrease by mintCost (burned)
+        assertEq(love20Token.totalSupply(), totalSupplyBefore - mintCost);
+    }
+
+    function testMintIncreasesUnmintedSupply() public {
+        string memory groupName = "UnmintedSupplyTest";
+        uint256 unmintedSupplyBefore = love20Token.maxSupply() -
+            love20Token.totalSupply();
+        uint256 mintCost = group.calculateMintCost(groupName);
+
+        vm.startPrank(user1);
+        love20Token.approve(address(group), mintCost);
+        group.mint(groupName);
+        vm.stopPrank();
+
+        uint256 unmintedSupplyAfter = love20Token.maxSupply() -
+            love20Token.totalSupply();
+        // Unminted supply should increase by mintCost (burned tokens return to unminted pool)
+        assertEq(unmintedSupplyAfter, unmintedSupplyBefore + mintCost);
+    }
+
+    function testMintCostIncreasesAfterBurn() public {
+        // This test verifies that burning tokens increases future mint costs
+        string memory groupName1 = "FirstGroup1";
+        string memory groupName2 = "SecondGroup";
+
+        // Calculate cost for second group BEFORE first mint
+        uint256 costBefore = group.calculateMintCost(groupName2);
+
+        // Mint first group (this burns tokens, increasing unminted supply)
+        uint256 mintCost1 = group.calculateMintCost(groupName1);
+        vm.startPrank(user1);
+        love20Token.approve(address(group), mintCost1);
+        group.mint(groupName1);
+        vm.stopPrank();
+
+        // Calculate cost for second group AFTER first mint
+        uint256 costAfter = group.calculateMintCost(groupName2);
+
+        // Cost should increase because unminted supply increased
+        assertGt(costAfter, costBefore);
+
+        // Verify the exact increase: costAfter = costBefore + (mintCost1 / baseDivisor)
+        uint256 expectedIncrease = mintCost1 / BASE_DIVISOR;
+        assertEq(costAfter - costBefore, expectedIncrease);
+    }
+
+    function testMultipleMintsCumulativelyIncreaseCost() public {
+        // Test that multiple mints cumulatively increase the cost
+        string memory groupName1 = "CumulTest1";
+        string memory groupName2 = "CumulTest2";
+        string memory groupName3 = "CumulTest3";
+
+        uint256 initialCost = group.calculateMintCost(groupName3);
+
+        // Mint first group
+        uint256 mintCost1 = group.calculateMintCost(groupName1);
+        vm.startPrank(user1);
+        love20Token.approve(address(group), mintCost1);
+        group.mint(groupName1);
+        vm.stopPrank();
+
+        uint256 costAfterFirst = group.calculateMintCost(groupName3);
+
+        // Mint second group
+        uint256 mintCost2 = group.calculateMintCost(groupName2);
+        vm.startPrank(user2);
+        love20Token.approve(address(group), mintCost2);
+        group.mint(groupName2);
+        vm.stopPrank();
+
+        uint256 costAfterSecond = group.calculateMintCost(groupName3);
+
+        // Costs should be increasing
+        assertGt(costAfterFirst, initialCost);
+        assertGt(costAfterSecond, costAfterFirst);
+
+        // Total increase should equal total burned / baseDivisor
+        uint256 totalBurned = mintCost1 + mintCost2;
+        uint256 expectedTotalIncrease = totalBurned / BASE_DIVISOR;
+        assertEq(costAfterSecond - initialCost, expectedTotalIncrease);
     }
 
     // ============ Transfer Tests ============
@@ -678,13 +760,15 @@ contract LOVE20GroupTest is Test {
         string memory groupName2 = "User2Group";
 
         uint256 mintCost1 = group.calculateMintCost(groupName1);
-        uint256 mintCost2 = group.calculateMintCost(groupName2);
 
         // User1 mints
         vm.startPrank(user1);
         love20Token.approve(address(group), mintCost1);
         uint256 tokenId1 = group.mint(groupName1);
         vm.stopPrank();
+
+        // Calculate cost AFTER first mint (cost increases due to burn)
+        uint256 mintCost2 = group.calculateMintCost(groupName2);
 
         // User2 mints
         vm.startPrank(user2);
