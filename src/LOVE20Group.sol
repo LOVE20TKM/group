@@ -37,7 +37,7 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
     /**
      * @param love20Token_ Address of the LOVE20 token
      * @param baseDivisor_ Base divisor for cost calculation (e.g., 1e8)
-     * @param bytesThreshold_ Byte length threshold for cost multiplier (e.g., 10)
+     * @param bytesThreshold_ Byte length threshold for cost multiplier (e.g., 8)
      * @param multiplier_ Multiplier for short names (e.g., 10)
      * @param maxGroupNameLength_ Maximum group name length in bytes (e.g., 64)
      */
@@ -111,8 +111,8 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
      * @notice Calculate the cost to mint a group with the given group name
      * @dev Cost formula:
      *      Base cost = remaining unminted LOVE20 / 10^8
-     *      For names with >= 10 bytes: cost = base cost
-     *      For names with < 10 bytes: cost = base cost * (10 ^ (10 - byte_length))
+     *      For names with >= 8 bytes: cost = base cost
+     *      For names with < 8 bytes: cost = base cost * (10 ^ (8 - byte_length))
      * @param groupName The group name to calculate cost for
      * @return The cost in LOVE20 tokens
      */
