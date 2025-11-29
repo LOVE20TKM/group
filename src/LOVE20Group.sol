@@ -26,11 +26,14 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
 
     uint256 private _nextTokenId = 1;
 
-    // Mapping from token ID to group name
+    // Mapping from token ID to group name (original case)
     mapping(uint256 => string) private _groupNames;
 
     // Mapping from group name to token ID (0 if not exists)
     mapping(string => uint256) private _groupNameToTokenId;
+
+    // Mapping from normalized (lowercase) name to token ID for case-insensitive lookup
+    mapping(string => uint256) private _normalizedNameToTokenId;
 
     // ============ Constructor ============
 
@@ -88,13 +91,17 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
     ) internal {
         if (bytes(groupName).length == 0) revert GroupNameEmpty();
         if (!_isValidGroupName(groupName)) revert InvalidGroupName();
-        if (_groupNameToTokenId[groupName] != 0)
+
+        // Use normalized (lowercase) name for uniqueness check
+        string memory normalizedName = _toLowerCase(groupName);
+        if (_normalizedNameToTokenId[normalizedName] != 0)
             revert GroupNameAlreadyExists();
 
         uint256 tokenId = _nextTokenId++;
         _mint(to, tokenId);
         _groupNames[tokenId] = groupName;
         _groupNameToTokenId[groupName] = tokenId;
+        _normalizedNameToTokenId[normalizedName] = tokenId;
 
         if (mintCost > 0) {
             ILOVE20Token token = ILOVE20Token(love20Token);
@@ -157,25 +164,36 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
     }
 
     /**
-     * @notice Check if a group name is already used
+     * @notice Check if a group name is already used (case-insensitive)
      * @param groupName The group name to check
      * @return True if the group name is already used
      */
     function isGroupNameUsed(
         string calldata groupName
     ) external view returns (bool) {
-        return _groupNameToTokenId[groupName] != 0;
+        return _normalizedNameToTokenId[_toLowerCase(groupName)] != 0;
     }
 
     /**
-     * @notice Get token ID by group name
+     * @notice Get token ID by group name (case-insensitive)
      * @param groupName The group name to query
      * @return The token ID associated with the group name (0 if not exists)
      */
     function tokenIdOf(
         string calldata groupName
     ) external view returns (uint256) {
-        return _groupNameToTokenId[groupName];
+        return _normalizedNameToTokenId[_toLowerCase(groupName)];
+    }
+
+    /**
+     * @notice Get the normalized (lowercase) version of a group name
+     * @param groupName The group name to normalize
+     * @return The normalized group name with ASCII uppercase converted to lowercase
+     */
+    function normalizedNameOf(
+        string calldata groupName
+    ) external pure returns (string memory) {
+        return _toLowerCase(groupName);
     }
 
     // ============ Internal Functions ============
@@ -417,5 +435,26 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
         }
 
         return true;
+    }
+
+    /**
+     * @dev Convert ASCII uppercase letters (A-Z) to lowercase (a-z)
+     * @param str The string to convert
+     * @return A new string with uppercase letters converted to lowercase
+     */
+    function _toLowerCase(
+        string memory str
+    ) private pure returns (string memory) {
+        bytes memory bStr = bytes(str);
+        bytes memory result = new bytes(bStr.length);
+        for (uint256 i = 0; i < bStr.length; i++) {
+            // ASCII A-Z: 0x41-0x5A -> a-z: 0x61-0x7A
+            if (bStr[i] >= 0x41 && bStr[i] <= 0x5A) {
+                result[i] = bytes1(uint8(bStr[i]) + 32);
+            } else {
+                result[i] = bStr[i];
+            }
+        }
+        return string(result);
     }
 }

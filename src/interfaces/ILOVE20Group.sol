@@ -42,15 +42,20 @@ interface ILOVE20Group is
     // Get the group name for a token ID
     function groupNameOf(uint256 tokenId) external view returns (string memory);
 
-    // Check if a group name is already used
+    // Check if a group name is already used (case-insensitive)
     function isGroupNameUsed(
         string calldata groupName
     ) external view returns (bool);
 
-    // Get token ID by group name
+    // Get token ID by group name (case-insensitive)
     function tokenIdOf(
         string calldata groupName
     ) external view returns (uint256);
+
+    // Get the normalized (lowercase) version of a group name
+    function normalizedNameOf(
+        string calldata groupName
+    ) external pure returns (string memory);
 
     // Get the LOVE20 token address
     function love20Token() external view returns (address);

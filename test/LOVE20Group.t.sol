@@ -346,6 +346,81 @@ contract LOVE20GroupTest is Test {
         vm.stopPrank();
     }
 
+    function testCannotMintDuplicateNameCaseInsensitive() public {
+        string memory groupName1 = "TestGroup";
+        string memory groupName2 = "testgroup";
+        string memory groupName3 = "TESTGROUP";
+
+        uint256 mintCost = group.calculateMintCost(groupName1);
+
+        // First mint succeeds
+        vm.startPrank(user1);
+        love20Token.approve(address(group), mintCost);
+        group.mint(groupName1);
+        vm.stopPrank();
+
+        // Second mint with lowercase version fails
+        vm.startPrank(user2);
+        love20Token.approve(address(group), mintCost);
+        vm.expectRevert(ILOVE20GroupErrors.GroupNameAlreadyExists.selector);
+        group.mint(groupName2);
+        vm.stopPrank();
+
+        // Third mint with uppercase version also fails
+        vm.startPrank(user2);
+        love20Token.approve(address(group), mintCost);
+        vm.expectRevert(ILOVE20GroupErrors.GroupNameAlreadyExists.selector);
+        group.mint(groupName3);
+        vm.stopPrank();
+    }
+
+    function testCaseInsensitiveLookup() public {
+        string memory groupName = "MyGroup";
+        uint256 mintCost = group.calculateMintCost(groupName);
+
+        vm.startPrank(user1);
+        love20Token.approve(address(group), mintCost);
+        uint256 tokenId = group.mint(groupName);
+        vm.stopPrank();
+
+        // All case variants should return the same token ID
+        assertEq(group.tokenIdOf("MyGroup"), tokenId);
+        assertEq(group.tokenIdOf("mygroup"), tokenId);
+        assertEq(group.tokenIdOf("MYGROUP"), tokenId);
+        assertEq(group.tokenIdOf("mYgRoUp"), tokenId);
+
+        // All case variants should return true for isGroupNameUsed
+        assertTrue(group.isGroupNameUsed("MyGroup"));
+        assertTrue(group.isGroupNameUsed("mygroup"));
+        assertTrue(group.isGroupNameUsed("MYGROUP"));
+        assertTrue(group.isGroupNameUsed("mYgRoUp"));
+    }
+
+    function testOriginalCasePreserved() public {
+        string memory groupName = "MyMixedCaseGroup";
+        uint256 mintCost = group.calculateMintCost(groupName);
+
+        vm.startPrank(user1);
+        love20Token.approve(address(group), mintCost);
+        uint256 tokenId = group.mint(groupName);
+        vm.stopPrank();
+
+        // groupNameOf should return the original case
+        assertEq(group.groupNameOf(tokenId), "MyMixedCaseGroup");
+    }
+
+    function testNormalizedNameOf() public view {
+        // ASCII uppercase should be converted to lowercase
+        assertEq(group.normalizedNameOf("MyGroup"), "mygroup");
+        assertEq(group.normalizedNameOf("ALLCAPS"), "allcaps");
+        assertEq(group.normalizedNameOf("alllower"), "alllower");
+        assertEq(group.normalizedNameOf("MiXeD-CaSe_123"), "mixed-case_123");
+
+        // Non-ASCII characters should remain unchanged
+        assertEq(group.normalizedNameOf(unicode"Group组名"), unicode"group组名");
+        assertEq(group.normalizedNameOf(unicode"🎉PARTY"), unicode"🎉party");
+    }
+
     function testCannotMintWithInsufficientApproval() public {
         string memory groupName = "TestGroup";
         uint256 mintCost = group.calculateMintCost(groupName);
