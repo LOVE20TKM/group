@@ -1,6 +1,6 @@
-# PoolID 部署脚本使用指南
+# Group 部署脚本使用指南
 
-本目录包含 PoolID 合约的部署和验证脚本。
+本目录包含 Group 合约的部署和验证脚本。
 
 ## 目录结构
 
@@ -44,26 +44,26 @@ VERIFIER=blockscout
 VERIFIER_URL=http://chain1.thinkiumscan.net/api/v2
 ```
 
-#### `groupid.params` (示例)
+#### `group.params` (示例)
 
 ```bash
-# PoolID Contract Configuration
+# Group Contract Configuration
 
 # LOVE20 Token Address (required)
 LOVE20_TOKEN_ADDRESS=0xaCE196081461beFCCDfB392A0B535A750078b2Aa
 
 # Contract Parameters
 BASE_DIVISOR=100000000
-BYTES_THRESHOLD=10
+BYTES_THRESHOLD=8
 MULTIPLIER=10
-MAX_POOL_NAME_LENGTH=64
+MAX_GROUP_NAME_LENGTH=64
 ```
 
-#### `address.poolid.params`
+#### `address.group.params`
 
 ```bash
 # 部署后自动生成，初始为空
-groupIdAddress=
+groupAddress=
 ```
 
 ### 3. Keystore 账户
@@ -107,7 +107,7 @@ source one_click_deploy.sh anvil
 一键部署会自动完成：
 
 1. 环境初始化和参数加载
-2. PoolID 合约部署
+2. Group 合约部署
 3. 合约源码验证（仅 Thinkium 网络）
 4. 部署配置检查
 
@@ -128,16 +128,16 @@ source 00_init.sh <网络名称>
 - 请求 keystore 密码
 - 定义辅助函数（`forge_script`, `cast_call`, `check_equal` 等）
 
-#### Step 2: 部署 PoolID 合约
+#### Step 2: 部署 Group 合约
 
 ```bash
-forge_script_deploy_pool_id
+forge_script_deploy_group
 ```
 
 这将：
 
-- 部署 PoolID 合约
-- 自动保存合约地址到 `script/network/<网络名称>/address.poolid.params`
+- 部署 Group 合约
+- 自动保存合约地址到 `script/network/<网络名称>/address.group.params`
 - 显示部署摘要
 
 #### Step 3: 验证合约（可选，仅 Thinkium 网络）
@@ -156,7 +156,7 @@ source 99_check.sh
 
 这将验证：
 
-- PoolID 合约的 love20Token 地址是否正确
+- Group 合约的 love20Token 地址是否正确
 - 合约名称和符号
 - 当前总供应量
 
@@ -184,14 +184,14 @@ source 99_check.sh
 1. `cast_call(address, function_signature, ...args)` - 调用合约只读函数
 2. `check_equal(description, expected, actual)` - 比较两个值是否相等
 3. `forge_script(...)` - 执行 Foundry 脚本（带默认参数）
-4. `forge_script_deploy_pool_id()` - 部署 PoolID 合约
+4. `forge_script_deploy_group()` - 部署 Group 合约
 
 ### one_click_deploy.sh - 一键部署
 
 依次执行：
 
 1. 环境初始化（`00_init.sh`）
-2. 合约部署（`forge_script_deploy_pool_id`）
+2. 合约部署（`forge_script_deploy_group`）
 3. 合约验证（`03_verify.sh`，仅 Thinkium 网络）
 4. 部署检查（`99_check.sh`）
 
@@ -217,52 +217,52 @@ source 99_check.sh
 ```bash
 # 加载环境
 source 00_init.sh <网络名称>
-source $network_dir/address.poolid.params
+source $network_dir/address.group.params
 
 # 使用便捷函数 cast_call（已在 00_init.sh 中定义）
-cast_call $groupIdAddress "name()(string)"
-cast_call $groupIdAddress "symbol()(string)"
-cast_call $groupIdAddress "totalSupply()(uint256)"
-cast_call $groupIdAddress "love20Token()(address)"
+cast_call $groupAddress "name()(string)"
+cast_call $groupAddress "symbol()(string)"
+cast_call $groupAddress "totalSupply()(uint256)"
+cast_call $groupAddress "love20Token()(address)"
 
 # 查询特定 token
-cast_call $groupIdAddress "ownerOf(uint256)(address)" 1
-cast_call $groupIdAddress "poolNameOf(uint256)(string)" 1
+cast_call $groupAddress "ownerOf(uint256)(address)" 1
+cast_call $groupAddress "groupNameOf(uint256)(string)" 1
 
 # 查询链群名称
-cast_call $groupIdAddress "isPoolNameUsed(string)(bool)" "MyPool"
-cast_call $groupIdAddress "tokenIdOf(string)(uint256)" "MyPool"
+cast_call $groupAddress "isGroupNameUsed(string)(bool)" "MyGroup"
+cast_call $groupAddress "tokenIdOf(string)(uint256)" "MyGroup"
 
 # 计算铸造成本
-cast_call $groupIdAddress "calculateMintCost(string)(uint256)" "MyPool"
+cast_call $groupAddress "calculateMintCost(string)(uint256)" "MyGroup"
 ```
 
 ### 发送交易（写操作）
 
 ```bash
-# 铸造 Pool ID 完整流程
+# 铸造 Group 完整流程
 
 # 1. 设置变量
-POOL_NAME="YourPoolName"
+GROUP_NAME="YourGroupName"
 
 # 2. 计算铸造成本
-MINT_COST=$(cast_call $groupIdAddress "calculateMintCost(string)(uint256)" "$POOL_NAME")
+MINT_COST=$(cast_call $groupAddress "calculateMintCost(string)(uint256)" "$GROUP_NAME")
 echo "需要 LOVE20: $MINT_COST wei"
 
 # 3. 批准 LOVE20 代币
 cast send $LOVE20_TOKEN_ADDRESS \
   "approve(address,uint256)" \
-  $groupIdAddress $MINT_COST \
+  $groupAddress $MINT_COST \
   --rpc-url $RPC_URL \
   --account $KEYSTORE_ACCOUNT \
   --password "$KEYSTORE_PASSWORD" \
   --gas-price 5000000000 \
   --legacy
 
-# 4. 铸造 Pool ID
-cast send $groupIdAddress \
+# 4. 铸造 Group
+cast send $groupAddress \
   "mint(string)(uint256)" \
-  "$POOL_NAME" \
+  "$GROUP_NAME" \
   --rpc-url $RPC_URL \
   --account $KEYSTORE_ACCOUNT \
   --password "$KEYSTORE_PASSWORD" \
@@ -282,17 +282,17 @@ cast send $groupIdAddress \
 ### 常用查询示例
 
 ```bash
-# 查看自己拥有的 Pool ID 数量
-cast_call $groupIdAddress "balanceOf(address)(uint256)" $ACCOUNT_ADDRESS
+# 查看自己拥有的 Group 数量
+cast_call $groupAddress "balanceOf(address)(uint256)" $ACCOUNT_ADDRESS
 
 # 查看某个地址的第 N 个 token
-cast_call $groupIdAddress "tokenOfOwnerByIndex(address,uint256)(uint256)" $ACCOUNT_ADDRESS 0
+cast_call $groupAddress "tokenOfOwnerByIndex(address,uint256)(uint256)" $ACCOUNT_ADDRESS 0
 
-# 查看总共铸造了多少个 Pool ID
-cast_call $groupIdAddress "totalSupply()(uint256)"
+# 查看总共铸造了多少个 Group
+cast_call $groupAddress "totalSupply()(uint256)"
 
 # 查看第 N 个铸造的 token ID
-cast_call $groupIdAddress "tokenByIndex(uint256)(uint256)" 0
+cast_call $groupAddress "tokenByIndex(uint256)(uint256)" 0
 ```
 
 ## 常见问题
@@ -304,8 +304,8 @@ cast_call $groupIdAddress "tokenByIndex(uint256)(uint256)" 0
 3. 确保包含所有必需的文件：
    - `.account` - keystore 账户配置
    - `network.params` - 网络 RPC 等信息
-   - `poolid.params` - PoolID 配置（包含 LOVE20 地址）
-   - `address.poolid.params` - 留空，部署后自动填充
+   - `group.params` - Group 配置（包含 LOVE20 地址）
+   - `address.group.params` - 留空，部署后自动填充
 
 ### Q2: 部署失败怎么办？
 
@@ -320,7 +320,7 @@ cast_call $groupIdAddress "tokenByIndex(uint256)(uint256)" 0
 
 ```bash
 # 在 forge_script 命令后添加 -vvvv 参数查看详细日志
-forge script script/DeployLOVE20PoolID.s.sol:DeployLOVE20PoolID --sig "run()" \
+forge script script/DeployLOVE20Group.s.sol:DeployLOVE20Group --sig "run()" \
   --rpc-url $RPC_URL \
   --account $KEYSTORE_ACCOUNT \
   --broadcast \
@@ -334,7 +334,7 @@ forge script script/DeployLOVE20PoolID.s.sol:DeployLOVE20PoolID --sig "run()" \
 1. 清空 `address.poolid.params` 文件：
 
 ```bash
-echo "groupIdAddress=" > script/network/<网络名称>/address.poolid.params
+echo "groupAddress=" > script/network/<网络名称>/address.group.params
 ```
 
 2. 重新运行部署脚本
@@ -347,32 +347,32 @@ echo "groupIdAddress=" > script/network/<网络名称>/address.poolid.params
 # 加载环境（如果还没加载）
 source 00_init.sh <网络名称>
 
-# 加载 PoolID 地址
-source $network_dir/address.poolid.params
+# 加载 Group 地址
+source $network_dir/address.group.params
 
 # 查询合约基本信息
-cast_call $groupIdAddress "name()(string)"
-cast_call $groupIdAddress "symbol()(string)"
-cast_call $groupIdAddress "love20Token()(address)"
-cast_call $groupIdAddress "totalSupply()(uint256)"
+cast_call $groupAddress "name()(string)"
+cast_call $groupAddress "symbol()(string)"
+cast_call $groupAddress "love20Token()(address)"
+cast_call $groupAddress "totalSupply()(uint256)"
 
 # 计算铸造成本示例
-cast_call $groupIdAddress "calculateMintCost(string)(uint256)" "TestPool"
+cast_call $groupAddress "calculateMintCost(string)(uint256)" "TestGroup"
 ```
 
 ### Q5: 如何在部署后更新参数文件？
 
-部署脚本会自动更新 `address.poolid.params`。如果需要手动修改：
+部署脚本会自动更新 `address.group.params`。如果需要手动修改：
 
 ```bash
 # 直接编辑文件
-vim script/network/<网络名称>/address.poolid.params
+vim script/network/<网络名称>/address.group.params
 ```
 
 或者使用命令：
 
 ```bash
-echo "groupIdAddress=0x新地址" > script/network/<网络名称>/address.poolid.params
+echo "groupAddress=0x新地址" > script/network/<网络名称>/address.group.params
 ```
 
 ## 安全建议

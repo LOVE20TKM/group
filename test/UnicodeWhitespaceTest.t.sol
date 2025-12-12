@@ -3,10 +3,7 @@ pragma solidity =0.8.17;
 
 import {Test} from "forge-std/Test.sol";
 import {LOVE20Group} from "../src/LOVE20Group.sol";
-import {
-    ILOVE20Group,
-    ILOVE20GroupErrors
-} from "../src/interfaces/ILOVE20Group.sol";
+import {ILOVE20Group, ILOVE20GroupErrors} from "../src/interfaces/ILOVE20Group.sol";
 import {MockLOVE20Token} from "./mocks/MockLOVE20Token.sol";
 
 /**
@@ -21,7 +18,7 @@ contract UnicodeWhitespaceTest is Test {
 
     uint256 constant MAX_SUPPLY = 21_000_000_000 * 1e18; // 21 billion tokens
     uint256 constant BASE_DIVISOR = 1e8;
-    uint256 constant BYTES_THRESHOLD = 10;
+    uint256 constant BYTES_THRESHOLD = 8;
     uint256 constant MULTIPLIER = 10;
     uint256 constant MAX_GROUP_NAME_LENGTH = 64;
 
@@ -32,13 +29,7 @@ contract UnicodeWhitespaceTest is Test {
         love20Token = new MockLOVE20Token("LOVE20", "LOVE", MAX_SUPPLY);
 
         // Deploy LOVE20Group contract
-        group = new LOVE20Group(
-            address(love20Token),
-            BASE_DIVISOR,
-            BYTES_THRESHOLD,
-            MULTIPLIER,
-            MAX_GROUP_NAME_LENGTH
-        );
+        group = new LOVE20Group(address(love20Token), BASE_DIVISOR, BYTES_THRESHOLD, MULTIPLIER, MAX_GROUP_NAME_LENGTH);
 
         // Mint some tokens to user
         love20Token.mint(user1, 1_000_000 * 1e18);

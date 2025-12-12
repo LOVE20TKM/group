@@ -17,10 +17,7 @@ contract DeployLOVE20Group is Script {
         uint256 baseDivisor = vm.envOr("BASE_DIVISOR", uint256(100000000));
         uint256 bytesThreshold = vm.envOr("BYTES_THRESHOLD", uint256(8));
         uint256 multiplier = vm.envOr("MULTIPLIER", uint256(10));
-        uint256 maxGroupNameLength = vm.envOr(
-            "MAX_GROUP_NAME_LENGTH",
-            uint256(64)
-        );
+        uint256 maxGroupNameLength = vm.envOr("MAX_GROUP_NAME_LENGTH", uint256(64));
 
         console2.log("=== Deployment Parameters ===");
         console2.log("LOVE20 Token Address:", love20TokenAddress);
@@ -33,13 +30,8 @@ contract DeployLOVE20Group is Script {
         vm.startBroadcast();
 
         // Deploy LOVE20Group contract with all parameters
-        LOVE20Group group = new LOVE20Group(
-            love20TokenAddress,
-            baseDivisor,
-            bytesThreshold,
-            multiplier,
-            maxGroupNameLength
-        );
+        LOVE20Group group =
+            new LOVE20Group(love20TokenAddress, baseDivisor, bytesThreshold, multiplier, maxGroupNameLength);
 
         console2.log("LOVE20Group deployed at:", address(group));
 
@@ -47,17 +39,9 @@ contract DeployLOVE20Group is Script {
 
         // Save the deployed address to params file
         string memory network = vm.envOr("network", string("anvil"));
-        string memory addressFile = string.concat(
-            "script/network/",
-            network,
-            "/address.group.params"
-        );
+        string memory addressFile = string.concat("script/network/", network, "/address.group.params");
 
-        string memory content = string.concat(
-            "groupAddress=",
-            vm.toString(address(group)),
-            "\n"
-        );
+        string memory content = string.concat("groupAddress=", vm.toString(address(group)), "\n");
 
         vm.writeFile(addressFile, content);
         console2.log("Address saved to:", addressFile);

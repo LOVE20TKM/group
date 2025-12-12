@@ -1,10 +1,10 @@
-# GroupID Contract Configuration
+# Group Contract Configuration
 
 # LOVE20 Token Address (required)
-# This is the token used for minting Group IDs
+# This is the token used for minting Groups
 LOVE20_TOKEN_ADDRESS=0x75537828f2ce51be7289709686A69CbFDbB714F1
 
-# ===== GroupID Contract Parameters =====
+# ===== Group Contract Parameters =====
 
 # Base divisor for mint cost calculation
 # Cost = (unminted LOVE20) / BASE_DIVISOR

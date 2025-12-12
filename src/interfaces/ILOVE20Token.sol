@@ -7,11 +7,7 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 interface ILOVE20TokenEvents {
     event TokenMint(address indexed to, uint256 amount);
     event TokenBurn(address indexed from, uint256 amount);
-    event BurnForParentToken(
-        address indexed burner,
-        uint256 burnAmount,
-        uint256 parentTokenAmount
-    );
+    event BurnForParentToken(address indexed burner, uint256 burnAmount, uint256 parentTokenAmount);
 }
 
 interface ILOVE20TokenErrors {
@@ -23,12 +19,7 @@ interface ILOVE20TokenErrors {
     error InvalidSupply();
 }
 
-interface ILOVE20Token is
-    IERC20,
-    IERC20Metadata,
-    ILOVE20TokenEvents,
-    ILOVE20TokenErrors
-{
+interface ILOVE20Token is IERC20, IERC20Metadata, ILOVE20TokenEvents, ILOVE20TokenErrors {
     function maxSupply() external view returns (uint256);
 
     function minter() external view returns (address);
@@ -45,8 +36,5 @@ interface ILOVE20Token is
 
     function burn(uint256 amount) external;
 
-    function burnForParentToken(
-        uint256 amount
-    ) external returns (uint256 parentTokenAmount);
+    function burnForParentToken(uint256 amount) external returns (uint256 parentTokenAmount);
 }
-
