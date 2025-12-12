@@ -26,6 +26,8 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
 
     uint256 private _nextTokenId = 1;
 
+    uint256 public totalMintCost;
+
     // Mapping from token ID to group name (original case)
     mapping(uint256 => string) private _groupNames;
 
@@ -104,6 +106,7 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
             ILOVE20Token token = ILOVE20Token(love20Token);
             token.transferFrom(msg.sender, address(this), mintCost);
             token.burn(mintCost);
+            totalMintCost += mintCost;
         }
 
         emit GroupMint({

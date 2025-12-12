@@ -51,5 +51,7 @@ interface ILOVE20Group is
         string calldata groupName
     ) external pure returns (string memory);
 
+    function totalMintCost() external view returns (uint256);
+
     function love20Token() external view returns (address);
 }
