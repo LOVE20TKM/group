@@ -4,7 +4,11 @@ pragma solidity =0.8.17;
 import {Test} from "forge-std/Test.sol";
 import {console2} from "forge-std/console2.sol";
 import {LOVE20Group} from "../src/LOVE20Group.sol";
-import {ILOVE20Group, ILOVE20GroupErrors, ILOVE20GroupEvents} from "../src/interfaces/ILOVE20Group.sol";
+import {
+    ILOVE20Group,
+    ILOVE20GroupErrors,
+    ILOVE20GroupEvents
+} from "../src/interfaces/ILOVE20Group.sol";
 import {MockLOVE20Token} from "./mocks/MockLOVE20Token.sol";
 
 /**
@@ -35,7 +39,13 @@ contract LOVE20GroupTest is Test {
         love20Token = new MockLOVE20Token("LOVE20", "LOVE", MAX_SUPPLY);
 
         // Deploy LOVE20Group contract with parameters
-        group = new LOVE20Group(address(love20Token), BASE_DIVISOR, BYTES_THRESHOLD, MULTIPLIER, MAX_GROUP_NAME_LENGTH);
+        group = new LOVE20Group(
+            address(love20Token),
+            BASE_DIVISOR,
+            BYTES_THRESHOLD,
+            MULTIPLIER,
+            MAX_GROUP_NAME_LENGTH
+        );
 
         // Mint some tokens to users
         love20Token.mint(user1, 1_000_000 * 1e18);
@@ -53,7 +63,13 @@ contract LOVE20GroupTest is Test {
 
     function testCannotInitializeWithZeroAddress() public {
         vm.expectRevert(ILOVE20GroupErrors.InvalidTokenAddress.selector);
-        new LOVE20Group(address(0), BASE_DIVISOR, BYTES_THRESHOLD, MULTIPLIER, MAX_GROUP_NAME_LENGTH);
+        new LOVE20Group(
+            address(0),
+            BASE_DIVISOR,
+            BYTES_THRESHOLD,
+            MULTIPLIER,
+            MAX_GROUP_NAME_LENGTH
+        );
     }
 
     // ============ Minting Cost Calculation Tests ============
@@ -213,7 +229,8 @@ contract LOVE20GroupTest is Test {
 
     function testCannotMintWithTooLongName() public {
         // Create a name longer than 64 characters
-        string memory groupName = "ThisIsAVeryLongGroupNameThatExceedsSixtyFourCharactersInLengthAndShouldBeRejected";
+        string
+            memory groupName = "ThisIsAVeryLongGroupNameThatExceedsSixtyFourCharactersInLengthAndShouldBeRejected";
 
         vm.startPrank(user1);
         vm.expectRevert(ILOVE20GroupErrors.InvalidGroupName.selector);
@@ -355,7 +372,8 @@ contract LOVE20GroupTest is Test {
 
     function testMintWith63ByteName() public {
         // Test with a 63-byte group name (just under the limit)
-        string memory groupName = "123456789012345678901234567890123456789012345678901234567890123";
+        string
+            memory groupName = "123456789012345678901234567890123456789012345678901234567890123";
         assertEq(bytes(groupName).length, 63);
 
         uint256 mintCost = group.calculateMintCost(groupName);
@@ -383,7 +401,8 @@ contract LOVE20GroupTest is Test {
 
     function testMintWithMaxLengthName() public {
         // Test with maximum allowed length (64 characters)
-        string memory groupName = "1234567890123456789012345678901234567890123456789012345678901234";
+        string
+            memory groupName = "1234567890123456789012345678901234567890123456789012345678901234";
         assertEq(bytes(groupName).length, 64);
 
         uint256 mintCost = group.calculateMintCost(groupName);
@@ -416,16 +435,21 @@ contract LOVE20GroupTest is Test {
         vm.startPrank(user1);
         love20Token.approve(address(group), mintCost);
 
-        // Expect the GroupMinted event
+        // Expect the GroupMint event
         vm.expectEmit(true, true, false, true, address(group));
-        emit GroupMinted(expectedTokenId, user1, groupName, mintCost);
+        emit GroupMint(expectedTokenId, user1, groupName, mintCost);
 
         group.mint(groupName);
         vm.stopPrank();
     }
 
     // Event declaration for testing
-    event GroupMinted(uint256 indexed tokenId, address indexed owner, string groupName, uint256 mintCost);
+    event GroupMint(
+        uint256 indexed tokenId,
+        address indexed owner,
+        string groupName,
+        uint256 mintCost
+    );
 
     function testMintBurnsTokens() public {
         string memory groupName = "TokenBurnTest";

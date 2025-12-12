@@ -2,7 +2,9 @@
 pragma solidity =0.8.17;
 
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import {ERC721Enumerable} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+import {
+    ERC721Enumerable
+} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import {ILOVE20Group} from "./interfaces/ILOVE20Group.sol";
 import {ILOVE20Token} from "./interfaces/ILOVE20Token.sol";
 
@@ -69,7 +71,9 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
      * @param groupName The unique name for the group
      * @return tokenId The newly minted token ID
      */
-    function mint(string calldata groupName) external returns (uint256 tokenId) {
+    function mint(
+        string calldata groupName
+    ) external returns (uint256 tokenId) {
         // ========== Checks ==========
         uint256 mintCost = calculateMintCost(groupName);
         // ========== Effects ==========
@@ -77,7 +81,11 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
         return _nextTokenId - 1;
     }
 
-    function _mint(address to, string memory groupName, uint256 mintCost) internal {
+    function _mint(
+        address to,
+        string memory groupName,
+        uint256 mintCost
+    ) internal {
         if (bytes(groupName).length == 0) revert GroupNameEmpty();
         if (!_isValidGroupName(groupName)) revert InvalidGroupName();
 
@@ -98,7 +106,12 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
             token.burn(mintCost);
         }
 
-        emit GroupMinted(tokenId, msg.sender, groupName, mintCost);
+        emit GroupMint({
+            tokenId: tokenId,
+            owner: msg.sender,
+            groupName: groupName,
+            mintCost: mintCost
+        });
     }
 
     /**
@@ -110,7 +123,9 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
      * @param groupName The group name to calculate cost for
      * @return The cost in LOVE20 tokens
      */
-    function calculateMintCost(string calldata groupName) public view returns (uint256) {
+    function calculateMintCost(
+        string calldata groupName
+    ) public view returns (uint256) {
         ILOVE20Token token = ILOVE20Token(love20Token);
 
         // Get the unminted supply (maxSupply - totalSupply)
@@ -143,7 +158,9 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
      * @param tokenId The token ID to query
      * @return The group name associated with the token ID
      */
-    function groupNameOf(uint256 tokenId) external view returns (string memory) {
+    function groupNameOf(
+        uint256 tokenId
+    ) external view returns (string memory) {
         _requireMinted(tokenId);
         return _groupNames[tokenId];
     }
@@ -153,7 +170,9 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
      * @param groupName The group name to check
      * @return True if the group name is already used
      */
-    function isGroupNameUsed(string calldata groupName) external view returns (bool) {
+    function isGroupNameUsed(
+        string calldata groupName
+    ) external view returns (bool) {
         return _normalizedNameToTokenId[_toLowerCase(groupName)] != 0;
     }
 
@@ -162,7 +181,9 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
      * @param groupName The group name to query
      * @return The token ID associated with the group name (0 if not exists)
      */
-    function tokenIdOf(string calldata groupName) external view returns (uint256) {
+    function tokenIdOf(
+        string calldata groupName
+    ) external view returns (uint256) {
         return _normalizedNameToTokenId[_toLowerCase(groupName)];
     }
 
@@ -171,7 +192,9 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
      * @param groupName The group name to normalize
      * @return The normalized group name with ASCII uppercase converted to lowercase
      */
-    function normalizedNameOf(string calldata groupName) external pure returns (string memory) {
+    function normalizedNameOf(
+        string calldata groupName
+    ) external pure returns (string memory) {
         return _toLowerCase(groupName);
     }
 
@@ -195,7 +218,9 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
      * Note: We check byte length, not character count. A single Unicode
      * character may use multiple bytes in UTF-8 encoding.
      */
-    function _isValidGroupName(string memory groupName) private view returns (bool) {
+    function _isValidGroupName(
+        string memory groupName
+    ) private view returns (bool) {
         bytes memory nameBytes = bytes(groupName);
         uint256 len = nameBytes.length;
 
@@ -307,7 +332,12 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
 
                 // Check for U+2000 to U+200F (Various spaces, zero-width chars, LRM, RLM)
                 // UTF-8: 0xE2 0x80 0x80-0x8F
-                if (byte1 == 0xE2 && byte2 == 0x80 && byte3 >= 0x80 && byte3 <= 0x8F) {
+                if (
+                    byte1 == 0xE2 &&
+                    byte2 == 0x80 &&
+                    byte3 >= 0x80 &&
+                    byte3 <= 0x8F
+                ) {
                     return false;
                 }
 
@@ -325,7 +355,12 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
 
                 // Check for U+202A-U+202E (Directional formatting characters)
                 // UTF-8: 0xE2 0x80 0xAA-0xAE
-                if (byte1 == 0xE2 && byte2 == 0x80 && byte3 >= 0xAA && byte3 <= 0xAE) {
+                if (
+                    byte1 == 0xE2 &&
+                    byte2 == 0x80 &&
+                    byte3 >= 0xAA &&
+                    byte3 <= 0xAE
+                ) {
                     return false;
                 }
 
@@ -399,7 +434,9 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
      * @param str The string to convert
      * @return A new string with uppercase letters converted to lowercase
      */
-    function _toLowerCase(string memory str) private pure returns (string memory) {
+    function _toLowerCase(
+        string memory str
+    ) private pure returns (string memory) {
         bytes memory bStr = bytes(str);
         bytes memory result = new bytes(bStr.length);
         for (uint256 i = 0; i < bStr.length; i++) {
