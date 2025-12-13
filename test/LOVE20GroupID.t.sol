@@ -429,25 +429,27 @@ contract LOVE20GroupTest is Test {
     function testMintEmitsEvent() public {
         string memory groupName = "EventTestGroup";
         uint256 mintCost = group.calculateMintCost(groupName);
+        string memory normalizedName = group.normalizedNameOf(groupName);
 
         uint256 expectedTokenId = 1;
 
         vm.startPrank(user1);
         love20Token.approve(address(group), mintCost);
 
-        // Expect the GroupMint event
+        // Expect the GroupMint event with normalizedName
         vm.expectEmit(true, true, false, true, address(group));
-        emit GroupMint(expectedTokenId, user1, groupName, mintCost);
+        emit GroupMint(expectedTokenId, user1, groupName, normalizedName, mintCost);
 
         group.mint(groupName);
         vm.stopPrank();
     }
 
-    // Event declaration for testing
+    // Event declaration for testing (with normalizedName field)
     event GroupMint(
         uint256 indexed tokenId,
         address indexed owner,
         string groupName,
+        string normalizedName,
         uint256 mintCost
     );
 

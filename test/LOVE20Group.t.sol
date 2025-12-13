@@ -511,25 +511,33 @@ contract LOVE20GroupTest is Test {
     function testMintEmitsEvent() public {
         string memory groupName = "EventTestGroup";
         uint256 mintCost = group.calculateMintCost(groupName);
+        string memory normalizedName = group.normalizedNameOf(groupName);
 
         uint256 expectedTokenId = 1;
 
         vm.startPrank(user1);
         love20Token.approve(address(group), mintCost);
 
-        // Expect the GroupMint event
+        // Expect the GroupMint event with normalizedName
         vm.expectEmit(true, true, false, true, address(group));
-        emit GroupMint(expectedTokenId, user1, groupName, mintCost);
+        emit GroupMint(
+            expectedTokenId,
+            user1,
+            groupName,
+            normalizedName,
+            mintCost
+        );
 
         group.mint(groupName);
         vm.stopPrank();
     }
 
-    // Event declaration for testing
+    // Event declaration for testing (with normalizedName field)
     event GroupMint(
         uint256 indexed tokenId,
         address indexed owner,
         string groupName,
+        string normalizedName,
         uint256 mintCost
     );
 
@@ -927,4 +935,58 @@ contract LOVE20GroupTest is Test {
             assertEq(cost, baseCost * multiplier);
         }
     }
+
+    // ============ Safe Mint Behavior Tests ============
+
+    function testMintToContractWithReceiver() public {
+        // Deploy a contract that implements IERC721Receiver
+        ERC721ReceiverMock receiver = new ERC721ReceiverMock();
+
+        string memory groupName = "MintToReceiver";
+        uint256 mintCost = group.calculateMintCost(groupName);
+
+        // Fund the receiver contract with LOVE20 tokens
+        love20Token.mint(address(receiver), mintCost);
+
+        vm.startPrank(address(receiver));
+        love20Token.approve(address(group), mintCost);
+        uint256 tokenId = group.mint(groupName);
+        vm.stopPrank();
+
+        assertEq(group.ownerOf(tokenId), address(receiver));
+    }
+
+    function testMintToContractWithoutReceiverReverts() public {
+        // Mint reverts if contract doesn't implement IERC721Receiver
+        NonReceiverMock nonReceiver = new NonReceiverMock();
+
+        string memory groupName = "MintToNonRcvr";
+        uint256 mintCost = group.calculateMintCost(groupName);
+
+        // Fund the non-receiver contract with LOVE20 tokens
+        love20Token.mint(address(nonReceiver), mintCost);
+
+        vm.startPrank(address(nonReceiver));
+        love20Token.approve(address(group), mintCost);
+        vm.expectRevert();
+        group.mint(groupName);
+        vm.stopPrank();
+    }
+}
+
+// Mock contract that implements IERC721Receiver
+contract ERC721ReceiverMock {
+    function onERC721Received(
+        address,
+        address,
+        uint256,
+        bytes calldata
+    ) external pure returns (bytes4) {
+        return this.onERC721Received.selector;
+    }
+}
+
+// Mock contract that does NOT implement IERC721Receiver
+contract NonReceiverMock {
+    // Empty contract - no onERC721Received implementation
 }

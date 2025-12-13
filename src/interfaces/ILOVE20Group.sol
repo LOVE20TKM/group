@@ -13,6 +13,7 @@ interface ILOVE20GroupEvents {
         uint256 indexed tokenId,
         address indexed owner,
         string groupName,
+        string normalizedName,
         uint256 mintCost
     );
 }

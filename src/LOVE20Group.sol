@@ -69,25 +69,23 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
 
     /**
      * @notice Mint a new group with the given group name
-     * @dev Requires payment in LOVE20 tokens based on name length
+     * @dev Requires payment in LOVE20 tokens based on name length.
+     *      Uses safeMint to ensure recipient can receive ERC721.
      * @param groupName The unique name for the group
      * @return tokenId The newly minted token ID
      */
     function mint(
         string calldata groupName
     ) external returns (uint256 tokenId) {
-        // ========== Checks ==========
         uint256 mintCost = calculateMintCost(groupName);
-        // ========== Effects ==========
-        _mint(msg.sender, groupName, mintCost);
-        return _nextTokenId - 1;
+        return _mintGroup(msg.sender, groupName, mintCost);
     }
 
-    function _mint(
+    function _mintGroup(
         address to,
         string memory groupName,
         uint256 mintCost
-    ) internal {
+    ) internal returns (uint256 tokenId) {
         if (bytes(groupName).length == 0) revert GroupNameEmpty();
         if (!_isValidGroupName(groupName)) revert InvalidGroupName();
 
@@ -97,8 +95,8 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
             revert GroupNameAlreadyExists();
         }
 
-        uint256 tokenId = _nextTokenId++;
-        _mint(to, tokenId);
+        tokenId = _nextTokenId++;
+        _safeMint(to, tokenId);
         _groupNames[tokenId] = groupName;
         _normalizedNameToTokenId[normalizedName] = tokenId;
 
@@ -113,8 +111,11 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
             tokenId: tokenId,
             owner: msg.sender,
             groupName: groupName,
+            normalizedName: normalizedName,
             mintCost: mintCost
         });
+
+        return tokenId;
     }
 
     /**
