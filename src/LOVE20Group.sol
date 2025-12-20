@@ -17,10 +17,10 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
     // ============ Immutable Parameters ============
 
     address public immutable love20Token;
-    uint256 public immutable baseDivisor;
-    uint256 public immutable bytesThreshold;
-    uint256 public immutable multiplier;
-    uint256 public immutable maxGroupNameLength;
+    uint256 public immutable BASE_DIVISOR;
+    uint256 public immutable BYTES_THRESHOLD;
+    uint256 public immutable MULTIPLIER;
+    uint256 public immutable MAX_GROUP_NAME_LENGTH;
 
     // ============ State Variables ============
 
@@ -59,10 +59,10 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
         }
 
         love20Token = love20Token_;
-        baseDivisor = baseDivisor_;
-        bytesThreshold = bytesThreshold_;
-        multiplier = multiplier_;
-        maxGroupNameLength = maxGroupNameLength_;
+        BASE_DIVISOR = baseDivisor_;
+        BYTES_THRESHOLD = bytesThreshold_;
+        MULTIPLIER = multiplier_;
+        MAX_GROUP_NAME_LENGTH = maxGroupNameLength_;
     }
 
     // ============ Group Functions ============
@@ -135,23 +135,23 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
         // Get the unminted supply (maxSupply - totalSupply)
         uint256 unmintedSupply = token.maxSupply() - token.totalSupply();
 
-        // Base cost = unminted supply / baseDivisor
-        uint256 baseCost = unmintedSupply / baseDivisor;
+        // Base cost = unminted supply / BASE_DIVISOR
+        uint256 baseCost = unmintedSupply / BASE_DIVISOR;
 
         // Get byte length of group name
         uint256 byteLength = bytes(groupName).length;
 
-        // If byte length >= bytesThreshold, return base cost
-        if (byteLength >= bytesThreshold) {
+        // If byte length >= BYTES_THRESHOLD, return base cost
+        if (byteLength >= BYTES_THRESHOLD) {
             return baseCost;
         }
 
-        // Otherwise, multiply by multiplier^(bytesThreshold - byteLength)
+        // Otherwise, multiply by MULTIPLIER^(BYTES_THRESHOLD - byteLength)
         uint256 costMultiplier = 1;
-        uint256 difference = bytesThreshold - byteLength;
+        uint256 difference = BYTES_THRESHOLD - byteLength;
 
         for (uint256 i = 0; i < difference; i++) {
-            costMultiplier *= multiplier;
+            costMultiplier *= MULTIPLIER;
         }
 
         return baseCost * costMultiplier;
@@ -229,7 +229,7 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
         uint256 len = nameBytes.length;
 
         // Check length bounds (byte length, not character count)
-        if (len == 0 || len > maxGroupNameLength) {
+        if (len == 0 || len > MAX_GROUP_NAME_LENGTH) {
             return false;
         }
 

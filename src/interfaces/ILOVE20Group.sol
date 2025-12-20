@@ -32,6 +32,14 @@ interface ILOVE20Group is
     ILOVE20GroupEvents,
     ILOVE20GroupErrors
 {
+    function BASE_DIVISOR() external view returns (uint256);
+
+    function BYTES_THRESHOLD() external view returns (uint256);
+
+    function MULTIPLIER() external view returns (uint256);
+
+    function MAX_GROUP_NAME_LENGTH() external view returns (uint256);
+
     function mint(string calldata groupName) external returns (uint256 tokenId);
 
     function calculateMintCost(

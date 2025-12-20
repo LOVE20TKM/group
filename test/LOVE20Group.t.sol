@@ -598,7 +598,7 @@ contract LOVE20GroupTest is Test {
         // Cost should increase because unminted supply increased
         assertGt(costAfter, costBefore);
 
-        // Verify the exact increase: costAfter = costBefore + (mintCost1 / baseDivisor)
+        // Verify the exact increase: costAfter = costBefore + (mintCost1 / BASE_DIVISOR)
         uint256 expectedIncrease = mintCost1 / BASE_DIVISOR;
         assertEq(costAfter - costBefore, expectedIncrease);
     }
@@ -633,7 +633,7 @@ contract LOVE20GroupTest is Test {
         assertGt(costAfterFirst, initialCost);
         assertGt(costAfterSecond, costAfterFirst);
 
-        // Total increase should equal total burned / baseDivisor
+        // Total increase should equal total burned / BASE_DIVISOR
         uint256 totalBurned = mintCost1 + mintCost2;
         uint256 expectedTotalIncrease = totalBurned / BASE_DIVISOR;
         assertEq(costAfterSecond - initialCost, expectedTotalIncrease);
