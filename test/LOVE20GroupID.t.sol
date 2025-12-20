@@ -55,7 +55,7 @@ contract LOVE20GroupTest is Test {
     // ============ Initialization Tests ============
 
     function testInitialization() public view {
-        assertEq(group.love20Token(), address(love20Token));
+        assertEq(group.LOVE20_TOKEN_ADDRESS(), address(love20Token));
         assertEq(group.totalSupply(), 0);
         assertEq(group.name(), "LOVE20 Group");
         assertEq(group.symbol(), "Group");
@@ -438,7 +438,13 @@ contract LOVE20GroupTest is Test {
 
         // Expect the GroupMint event with normalizedName
         vm.expectEmit(true, true, false, true, address(group));
-        emit GroupMint(expectedTokenId, user1, groupName, normalizedName, mintCost);
+        emit GroupMint(
+            expectedTokenId,
+            user1,
+            groupName,
+            normalizedName,
+            mintCost
+        );
 
         group.mint(groupName);
         vm.stopPrank();

@@ -156,7 +156,7 @@ source 99_check.sh
 
 这将验证：
 
-- Group 合约的 love20Token 地址是否正确
+- Group 合约的 LOVE20_TOKEN_ADDRESS 地址是否正确
 - 合约名称和符号
 - 当前总供应量
 
@@ -205,7 +205,7 @@ source 99_check.sh
 
 验证合约部署的正确性：
 
-- 检查 love20Token 地址是否正确
+- 检查 LOVE20_TOKEN_ADDRESS 地址是否正确
 - 显示合约名称、符号和总供应量
 
 ## 使用 Cast 命令与合约交互
@@ -223,7 +223,7 @@ source $network_dir/address.group.params
 cast_call $groupAddress "name()(string)"
 cast_call $groupAddress "symbol()(string)"
 cast_call $groupAddress "totalSupply()(uint256)"
-cast_call $groupAddress "love20Token()(address)"
+cast_call $groupAddress "LOVE20_TOKEN_ADDRESS()(address)"
 
 # 查询特定 token
 cast_call $groupAddress "ownerOf(uint256)(address)" 1
@@ -353,7 +353,7 @@ source $network_dir/address.group.params
 # 查询合约基本信息
 cast_call $groupAddress "name()(string)"
 cast_call $groupAddress "symbol()(string)"
-cast_call $groupAddress "love20Token()(address)"
+cast_call $groupAddress "LOVE20_TOKEN_ADDRESS()(address)"
 cast_call $groupAddress "totalSupply()(uint256)"
 
 # 计算铸造成本示例

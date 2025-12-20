@@ -16,7 +16,7 @@ import {ILOVE20Token} from "./interfaces/ILOVE20Token.sol";
 contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
     // ============ Immutable Parameters ============
 
-    address public immutable love20Token;
+    address public immutable LOVE20_TOKEN_ADDRESS;
     uint256 public immutable BASE_DIVISOR;
     uint256 public immutable BYTES_THRESHOLD;
     uint256 public immutable MULTIPLIER;
@@ -24,15 +24,21 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
 
     // ============ State Variables ============
 
-    uint256 private _nextTokenId = 1;
+    uint256 internal _nextTokenId = 1;
 
     uint256 public totalBurnedForMint;
 
     // Mapping from token ID to group name (original case)
-    mapping(uint256 => string) private _groupNames;
+    mapping(uint256 => string) internal _groupNames;
 
     // Mapping from normalized (lowercase) name to token ID for case-insensitive lookup
-    mapping(string => uint256) private _normalizedNameToTokenId;
+    mapping(string => uint256) internal _normalizedNameToTokenId;
+
+    // Array of all holder addresses
+    address[] internal _allHolders;
+
+    // Mapping from holder address to index in _allHolders array (1-based, 0 means not in array)
+    mapping(address => uint256) internal _holderIndex;
 
     // ============ Constructor ============
 
@@ -58,7 +64,7 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
             revert InvalidParameter();
         }
 
-        love20Token = love20Token_;
+        LOVE20_TOKEN_ADDRESS = love20Token_;
         BASE_DIVISOR = baseDivisor_;
         BYTES_THRESHOLD = bytesThreshold_;
         MULTIPLIER = multiplier_;
@@ -101,7 +107,7 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
         _normalizedNameToTokenId[normalizedName] = tokenId;
 
         if (mintCost > 0) {
-            ILOVE20Token token = ILOVE20Token(love20Token);
+            ILOVE20Token token = ILOVE20Token(LOVE20_TOKEN_ADDRESS);
             token.transferFrom(msg.sender, address(this), mintCost);
             token.burn(mintCost);
             totalBurnedForMint += mintCost;
@@ -130,7 +136,7 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
     function calculateMintCost(
         string calldata groupName
     ) public view returns (uint256) {
-        ILOVE20Token token = ILOVE20Token(love20Token);
+        ILOVE20Token token = ILOVE20Token(LOVE20_TOKEN_ADDRESS);
 
         // Get the unminted supply (maxSupply - totalSupply)
         uint256 unmintedSupply = token.maxSupply() - token.totalSupply();
@@ -202,7 +208,95 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
         return _toLowerCase(groupName);
     }
 
+    /**
+     * @notice Get the total number of unique holders
+     * @return The number of unique addresses that currently hold NFTs
+     */
+    function holdersCount() external view returns (uint256) {
+        return _allHolders.length;
+    }
+
+    /**
+     * @notice Get the holder address at the given index
+     * @param index The index in the holders array (0-based)
+     * @return The holder address at the given index
+     */
+    function holdersAtIndex(uint256 index) external view returns (address) {
+        if (index >= _allHolders.length) {
+            revert HolderIndexOutOfBounds();
+        }
+        return _allHolders[index];
+    }
+
     // ============ Internal Functions ============
+
+    /**
+     * @dev Add a holder to the holders array if not already present
+     * @param holder The address to add
+     */
+    function _addHolder(address holder) internal {
+        if (_holderIndex[holder] == 0 && holder != address(0)) {
+            _allHolders.push(holder);
+            _holderIndex[holder] = _allHolders.length; // 1-based index
+        }
+    }
+
+    /**
+     * @dev Remove a holder from the holders array using swap-and-pop
+     * @param holder The address to remove
+     */
+    function _removeHolder(address holder) internal {
+        uint256 index = _holderIndex[holder];
+        if (index == 0) return; // Not in array
+
+        uint256 lastIndex = _allHolders.length;
+        if (index != lastIndex) {
+            address lastHolder = _allHolders[lastIndex - 1];
+            _allHolders[index - 1] = lastHolder; // Convert to 0-based
+            _holderIndex[lastHolder] = index;
+        }
+        _allHolders.pop();
+        _holderIndex[holder] = 0;
+    }
+
+    /**
+     * @dev Hook that is called before any token transfer
+     * @param from Address transferring the token (address(0) for mint)
+     * @param to Address receiving the token (address(0) for burn)
+     * @param firstTokenId The token ID being transferred
+     * @param batchSize The number of tokens being transferred (always 1 for this contract)
+     */
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 firstTokenId,
+        uint256 batchSize
+    ) internal virtual override {
+        uint256 fromBalanceBefore = from != address(0) ? balanceOf(from) : 0;
+        uint256 toBalanceBefore = to != address(0) ? balanceOf(to) : 0;
+
+        super._beforeTokenTransfer(from, to, firstTokenId, batchSize);
+
+        if (from == address(0)) {
+            // Mint
+            if (toBalanceBefore == 0 && to != address(0)) {
+                _addHolder(to);
+            }
+        } else if (to == address(0)) {
+            // Burn
+            if (fromBalanceBefore == 1) {
+                _removeHolder(from);
+            }
+        } else {
+            // Transfer
+            if (fromBalanceBefore == 1) {
+                _removeHolder(from);
+            }
+            if (toBalanceBefore == 0) {
+                _addHolder(to);
+            }
+        }
+    }
 
     /**
      * @dev Validate group name characters and format
@@ -224,7 +318,7 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
      */
     function _isValidGroupName(
         string memory groupName
-    ) private view returns (bool) {
+    ) internal view returns (bool) {
         bytes memory nameBytes = bytes(groupName);
         uint256 len = nameBytes.length;
 
@@ -440,7 +534,7 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
      */
     function _toLowerCase(
         string memory str
-    ) private pure returns (string memory) {
+    ) internal pure returns (string memory) {
         bytes memory bStr = bytes(str);
         bytes memory result = new bytes(bStr.length);
         for (uint256 i = 0; i < bStr.length; i++) {

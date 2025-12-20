@@ -55,7 +55,7 @@ contract LOVE20GroupTest is Test {
     // ============ Initialization Tests ============
 
     function testInitialization() public view {
-        assertEq(group.love20Token(), address(love20Token));
+        assertEq(group.LOVE20_TOKEN_ADDRESS(), address(love20Token));
         assertEq(group.totalSupply(), 0);
         assertEq(group.totalBurnedForMint(), 0);
         assertEq(group.name(), "LOVE20 Group");

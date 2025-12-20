@@ -188,7 +188,7 @@ RPC_URL=https://proxy1.thinkiumrpc.net
 # 查询合约基本信息
 cast call $groupAddress "name()(string)" --rpc-url $RPC_URL
 cast call $groupAddress "symbol()(string)" --rpc-url $RPC_URL
-cast call $groupAddress "love20Token()(address)" --rpc-url $RPC_URL
+cast call $groupAddress "LOVE20_TOKEN_ADDRESS()(address)" --rpc-url $RPC_URL
 cast call $groupAddress "totalSupply()(uint256)" --rpc-url $RPC_URL
 
 # 查询特定 token 信息

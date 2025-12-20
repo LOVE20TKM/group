@@ -24,6 +24,7 @@ interface ILOVE20GroupErrors {
     error GroupNameAlreadyExists();
     error GroupNameEmpty();
     error InvalidGroupName();
+    error HolderIndexOutOfBounds();
 }
 
 interface ILOVE20Group is
@@ -32,6 +33,8 @@ interface ILOVE20Group is
     ILOVE20GroupEvents,
     ILOVE20GroupErrors
 {
+    function LOVE20_TOKEN_ADDRESS() external view returns (address);
+
     function BASE_DIVISOR() external view returns (uint256);
 
     function BYTES_THRESHOLD() external view returns (uint256);
@@ -62,5 +65,7 @@ interface ILOVE20Group is
 
     function totalBurnedForMint() external view returns (uint256);
 
-    function love20Token() external view returns (address);
+    function holdersCount() external view returns (uint256);
+
+    function holdersAtIndex(uint256 index) external view returns (address);
 }
