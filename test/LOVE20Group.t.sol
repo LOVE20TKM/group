@@ -143,9 +143,10 @@ contract LOVE20GroupTest is Test {
 
         vm.startPrank(user1);
         love20Token.approve(address(group), mintCost);
-        uint256 tokenId = group.mint(groupName);
+        (uint256 tokenId, uint256 returnedMintCost) = group.mint(groupName);
         vm.stopPrank();
 
+        assertEq(returnedMintCost, mintCost);
         assertEq(tokenId, 1);
         assertEq(group.totalSupply(), 1);
         assertEq(group.totalBurnedForMint(), mintCost);
@@ -165,7 +166,7 @@ contract LOVE20GroupTest is Test {
         // User1 mints first group
         vm.startPrank(user1);
         love20Token.approve(address(group), mintCost1);
-        uint256 tokenId1 = group.mint(groupName1);
+        (uint256 tokenId1, ) = group.mint(groupName1);
         vm.stopPrank();
         assertEq(group.totalBurnedForMint(), mintCost1);
 
@@ -175,7 +176,7 @@ contract LOVE20GroupTest is Test {
         // User2 mints second group
         vm.startPrank(user2);
         love20Token.approve(address(group), mintCost2);
-        uint256 tokenId2 = group.mint(groupName2);
+        (uint256 tokenId2, ) = group.mint(groupName2);
         vm.stopPrank();
 
         assertEq(tokenId1, 1);
@@ -339,7 +340,8 @@ contract LOVE20GroupTest is Test {
         // First mint succeeds
         vm.startPrank(user1);
         love20Token.approve(address(group), mintCost);
-        group.mint(groupName);
+        (, uint256 returnedMintCost) = group.mint(groupName);
+        assertEq(returnedMintCost, mintCost);
         vm.stopPrank();
 
         // Second mint with same name fails
@@ -384,7 +386,7 @@ contract LOVE20GroupTest is Test {
 
         vm.startPrank(user1);
         love20Token.approve(address(group), mintCost);
-        uint256 tokenId = group.mint(groupName);
+        (uint256 tokenId, ) = group.mint(groupName);
         vm.stopPrank();
 
         // All case variants should return the same token ID
@@ -406,7 +408,7 @@ contract LOVE20GroupTest is Test {
 
         vm.startPrank(user1);
         love20Token.approve(address(group), mintCost);
-        uint256 tokenId = group.mint(groupName);
+        (uint256 tokenId, ) = group.mint(groupName);
         vm.stopPrank();
 
         // groupNameOf should return the original case
@@ -445,7 +447,7 @@ contract LOVE20GroupTest is Test {
 
         vm.startPrank(user1);
         love20Token.approve(address(group), mintCost);
-        uint256 tokenId = group.mint(groupName);
+        (uint256 tokenId, ) = group.mint(groupName);
         vm.stopPrank();
 
         assertEq(group.groupNameOf(tokenId), groupName);
@@ -462,7 +464,7 @@ contract LOVE20GroupTest is Test {
 
         vm.startPrank(user1);
         love20Token.approve(address(group), mintCost);
-        uint256 tokenId = group.mint(groupName);
+        (uint256 tokenId, ) = group.mint(groupName);
         vm.stopPrank();
 
         assertEq(group.groupNameOf(tokenId), groupName);
@@ -475,7 +477,7 @@ contract LOVE20GroupTest is Test {
 
         vm.startPrank(user1);
         love20Token.approve(address(group), mintCost);
-        uint256 tokenId = group.mint(groupName);
+        (uint256 tokenId, ) = group.mint(groupName);
         vm.stopPrank();
 
         assertEq(group.groupNameOf(tokenId), groupName);
@@ -491,7 +493,7 @@ contract LOVE20GroupTest is Test {
 
         vm.startPrank(user1);
         love20Token.approve(address(group), mintCost);
-        uint256 tokenId = group.mint(groupName);
+        (uint256 tokenId, ) = group.mint(groupName);
         vm.stopPrank();
 
         assertEq(group.groupNameOf(tokenId), groupName);
@@ -648,7 +650,7 @@ contract LOVE20GroupTest is Test {
         // User1 mints
         vm.startPrank(user1);
         love20Token.approve(address(group), mintCost);
-        uint256 tokenId = group.mint(groupName);
+        (uint256 tokenId, ) = group.mint(groupName);
         vm.stopPrank();
 
         // User1 transfers to user2
@@ -667,7 +669,7 @@ contract LOVE20GroupTest is Test {
         // User1 mints
         vm.startPrank(user1);
         love20Token.approve(address(group), mintCost);
-        uint256 tokenId = group.mint(groupName);
+        (uint256 tokenId, ) = group.mint(groupName);
 
         // User1 approves user2
         group.approve(user2, tokenId);
@@ -687,7 +689,7 @@ contract LOVE20GroupTest is Test {
         // User1 mints
         vm.startPrank(user1);
         love20Token.approve(address(group), mintCost);
-        uint256 tokenId = group.mint(groupName);
+        (uint256 tokenId, ) = group.mint(groupName);
 
         // User1 sets approval for all to user2
         group.setApprovalForAll(user2, true);
@@ -743,13 +745,13 @@ contract LOVE20GroupTest is Test {
         // Mint three tokens
         vm.startPrank(user1);
         love20Token.approve(address(group), mintCost1 + mintCost2);
-        uint256 tokenId1 = group.mint(groupName1);
-        uint256 tokenId2 = group.mint(groupName2);
+        (uint256 tokenId1, ) = group.mint(groupName1);
+        (uint256 tokenId2, ) = group.mint(groupName2);
         vm.stopPrank();
 
         vm.startPrank(user2);
         love20Token.approve(address(group), mintCost3);
-        uint256 tokenId3 = group.mint(groupName3);
+        (uint256 tokenId3, ) = group.mint(groupName3);
         vm.stopPrank();
 
         // Test tokenByIndex
@@ -775,14 +777,14 @@ contract LOVE20GroupTest is Test {
         // User1 mints two tokens
         vm.startPrank(user1);
         love20Token.approve(address(group), mintCost1 + mintCost2);
-        uint256 tokenId1 = group.mint(groupName1);
-        uint256 tokenId2 = group.mint(groupName2);
+        (uint256 tokenId1, ) = group.mint(groupName1);
+        (uint256 tokenId2, ) = group.mint(groupName2);
         vm.stopPrank();
 
         // User2 mints one token
         vm.startPrank(user2);
         love20Token.approve(address(group), mintCost3);
-        uint256 tokenId3 = group.mint(groupName3);
+        (uint256 tokenId3, ) = group.mint(groupName3);
         vm.stopPrank();
 
         // Test tokenOfOwnerByIndex
@@ -816,7 +818,7 @@ contract LOVE20GroupTest is Test {
 
         vm.startPrank(user1);
         love20Token.approve(address(group), mintCost);
-        uint256 tokenId = group.mint(groupName);
+        (uint256 tokenId, ) = group.mint(groupName);
         vm.stopPrank();
 
         // Test all query functions
@@ -854,7 +856,7 @@ contract LOVE20GroupTest is Test {
         // User1 mints
         vm.startPrank(user1);
         love20Token.approve(address(group), mintCost1);
-        uint256 tokenId1 = group.mint(groupName1);
+        (uint256 tokenId1, ) = group.mint(groupName1);
         vm.stopPrank();
 
         // Calculate cost AFTER first mint (cost increases due to burn)
@@ -863,7 +865,7 @@ contract LOVE20GroupTest is Test {
         // User2 mints
         vm.startPrank(user2);
         love20Token.approve(address(group), mintCost2);
-        uint256 tokenId2 = group.mint(groupName2);
+        (uint256 tokenId2, ) = group.mint(groupName2);
         vm.stopPrank();
 
         // Verify ownership and token IDs
@@ -881,7 +883,7 @@ contract LOVE20GroupTest is Test {
         // User1 mints
         vm.startPrank(user1);
         love20Token.approve(address(group), mintCost);
-        uint256 tokenId = group.mint(groupName);
+        (uint256 tokenId, ) = group.mint(groupName);
         vm.stopPrank();
 
         // Transfer to user2
@@ -902,7 +904,7 @@ contract LOVE20GroupTest is Test {
 
         vm.startPrank(user1);
         love20Token.approve(address(group), mintCost);
-        uint256 tokenId = group.mint(groupName);
+        (uint256 tokenId, ) = group.mint(groupName);
         vm.stopPrank();
 
         // Token should still exist and be owned by user1
@@ -950,7 +952,7 @@ contract LOVE20GroupTest is Test {
 
         vm.startPrank(address(receiver));
         love20Token.approve(address(group), mintCost);
-        uint256 tokenId = group.mint(groupName);
+        (uint256 tokenId, ) = group.mint(groupName);
         vm.stopPrank();
 
         assertEq(group.ownerOf(tokenId), address(receiver));

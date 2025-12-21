@@ -82,9 +82,10 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
      */
     function mint(
         string calldata groupName
-    ) external returns (uint256 tokenId) {
-        uint256 mintCost = calculateMintCost(groupName);
-        return _mintGroup(msg.sender, groupName, mintCost);
+    ) external returns (uint256 tokenId, uint256 mintCost) {
+        mintCost = calculateMintCost(groupName);
+        tokenId = _mintGroup(msg.sender, groupName, mintCost);
+        return (tokenId, mintCost);
     }
 
     function _mintGroup(

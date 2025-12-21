@@ -43,7 +43,9 @@ interface ILOVE20Group is
 
     function MAX_GROUP_NAME_LENGTH() external view returns (uint256);
 
-    function mint(string calldata groupName) external returns (uint256 tokenId);
+    function mint(
+        string calldata groupName
+    ) external returns (uint256 tokenId, uint256 mintCost);
 
     function calculateMintCost(
         string calldata groupName
