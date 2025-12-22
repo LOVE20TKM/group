@@ -16,9 +16,17 @@ contract MockLOVE20Token {
     mapping(address => mapping(address => uint256)) public allowance;
 
     event Transfer(address indexed from, address indexed to, uint256 value);
-    event Approval(address indexed owner, address indexed spender, uint256 value);
+    event Approval(
+        address indexed owner,
+        address indexed spender,
+        uint256 value
+    );
 
-    constructor(string memory _name, string memory _symbol, uint256 _maxSupply) {
+    constructor(
+        string memory _name,
+        string memory _symbol,
+        uint256 _maxSupply
+    ) {
         name = _name;
         symbol = _symbol;
         maxSupply = _maxSupply;
@@ -28,19 +36,19 @@ contract MockLOVE20Token {
         require(totalSupply + amount <= maxSupply, "Exceeds max supply");
         totalSupply += amount;
         balanceOf[to] += amount;
-        emit Transfer(address(0), to, amount);
+        emit Transfer({from: address(0), to: to, value: amount});
     }
 
     function burn(uint256 amount) external {
         require(balanceOf[msg.sender] >= amount, "Insufficient balance");
         balanceOf[msg.sender] -= amount;
         totalSupply -= amount;
-        emit Transfer(msg.sender, address(0), amount);
+        emit Transfer({from: msg.sender, to: address(0), value: amount});
     }
 
     function approve(address spender, uint256 amount) external returns (bool) {
         allowance[msg.sender][spender] = amount;
-        emit Approval(msg.sender, spender, amount);
+        emit Approval({owner: msg.sender, spender: spender, value: amount});
         return true;
     }
 
@@ -48,19 +56,26 @@ contract MockLOVE20Token {
         require(balanceOf[msg.sender] >= amount, "Insufficient balance");
         balanceOf[msg.sender] -= amount;
         balanceOf[to] += amount;
-        emit Transfer(msg.sender, to, amount);
+        emit Transfer({from: msg.sender, to: to, value: amount});
         return true;
     }
 
-    function transferFrom(address from, address to, uint256 amount) external returns (bool) {
+    function transferFrom(
+        address from,
+        address to,
+        uint256 amount
+    ) external returns (bool) {
         require(balanceOf[from] >= amount, "Insufficient balance");
-        require(allowance[from][msg.sender] >= amount, "Insufficient allowance");
+        require(
+            allowance[from][msg.sender] >= amount,
+            "Insufficient allowance"
+        );
 
         allowance[from][msg.sender] -= amount;
         balanceOf[from] -= amount;
         balanceOf[to] += amount;
 
-        emit Transfer(from, to, amount);
+        emit Transfer({from: from, to: to, value: amount});
         return true;
     }
 }

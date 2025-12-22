@@ -522,13 +522,13 @@ contract LOVE20GroupTest is Test {
 
         // Expect the GroupMint event with normalizedName
         vm.expectEmit(true, true, false, true, address(group));
-        emit GroupMint(
-            expectedTokenId,
-            user1,
-            groupName,
-            normalizedName,
-            mintCost
-        );
+        emit GroupMint({
+            tokenId: expectedTokenId,
+            owner: user1,
+            groupName: groupName,
+            normalizedName: normalizedName,
+            mintCost: mintCost
+        });
 
         group.mint(groupName);
         vm.stopPrank();
