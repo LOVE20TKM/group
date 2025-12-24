@@ -154,14 +154,9 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
         }
 
         // Otherwise, multiply by MULTIPLIER^(BYTES_THRESHOLD - byteLength)
-        uint256 costMultiplier = 1;
         uint256 difference = BYTES_THRESHOLD - byteLength;
 
-        for (uint256 i = 0; i < difference; i++) {
-            costMultiplier *= MULTIPLIER;
-        }
-
-        return baseCost * costMultiplier;
+        return baseCost * (MULTIPLIER ** difference);
     }
 
     /**
