@@ -807,9 +807,8 @@ contract LOVE20GroupTest is Test {
         assertFalse(group.isGroupNameUsed(nonExistentGroup));
     }
 
-    function testCannotQueryGroupNameOfNonExistentToken() public {
-        vm.expectRevert();
-        group.groupNameOf(999);
+    function testCannotQueryGroupNameOfNonExistentToken() public view {
+        assertEq(group.groupNameOf(999), "");
     }
 
     function testQueryFunctionsAfterMint() public {

@@ -28,16 +28,16 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
 
     uint256 public totalBurnedForMint;
 
-    // Mapping from token ID to group name (original case)
+    // tokenId => groupName
     mapping(uint256 => string) internal _groupNames;
 
-    // Mapping from normalized (lowercase) name to token ID for case-insensitive lookup
+    // normalizedName => tokenId
     mapping(string => uint256) internal _normalizedNameToTokenId;
 
-    // Array of all holder addresses
+    // all holder addresses
     address[] internal _allHolders;
 
-    // Mapping from holder address to index in _allHolders array (1-based, 0 means not in array)
+    // holderAddress => index in _allHolders array (1-based, 0 means not in array)
     mapping(address => uint256) internal _holderIndex;
 
     // ============ Constructor ============
@@ -139,21 +139,16 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
     ) public view returns (uint256) {
         ILOVE20Token token = ILOVE20Token(LOVE20_TOKEN_ADDRESS);
 
-        // Get the unminted supply (maxSupply - totalSupply)
         uint256 unmintedSupply = token.maxSupply() - token.totalSupply();
 
-        // Base cost = unminted supply / BASE_DIVISOR
         uint256 baseCost = unmintedSupply / BASE_DIVISOR;
 
-        // Get byte length of group name
         uint256 byteLength = bytes(groupName).length;
 
-        // If byte length >= BYTES_THRESHOLD, return base cost
         if (byteLength >= BYTES_THRESHOLD) {
             return baseCost;
         }
 
-        // Otherwise, multiply by MULTIPLIER^(BYTES_THRESHOLD - byteLength)
         uint256 difference = BYTES_THRESHOLD - byteLength;
 
         return baseCost * (MULTIPLIER ** difference);
@@ -167,8 +162,8 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
     function groupNameOf(
         uint256 tokenId
     ) external view returns (string memory) {
-        _requireMinted(tokenId);
-        return _groupNames[tokenId];
+        if (_exists(tokenId)) return _groupNames[tokenId];
+        else return "";
     }
 
     /**
