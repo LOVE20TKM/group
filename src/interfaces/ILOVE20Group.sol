@@ -1,20 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.17;
 
-import {
-    IERC721Enumerable
-} from "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
-import {
-    IERC721Metadata
-} from "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
-
 interface ILOVE20GroupEvents {
-    event GroupMint(
+    event Mint(
         uint256 indexed tokenId,
         address indexed owner,
         string groupName,
         string normalizedName,
-        uint256 mintCost
+        uint256 cost
     );
 }
 
@@ -27,12 +20,7 @@ interface ILOVE20GroupErrors {
     error HolderIndexOutOfBounds();
 }
 
-interface ILOVE20Group is
-    IERC721Metadata,
-    IERC721Enumerable,
-    ILOVE20GroupEvents,
-    ILOVE20GroupErrors
-{
+interface ILOVE20Group is ILOVE20GroupEvents, ILOVE20GroupErrors {
     function LOVE20_TOKEN_ADDRESS() external view returns (address);
 
     function BASE_DIVISOR() external view returns (uint256);
@@ -65,7 +53,7 @@ interface ILOVE20Group is
         string calldata groupName
     ) external pure returns (string memory);
 
-    function totalBurnedForMint() external view returns (uint256);
+    function totalMintCost() external view returns (uint256);
 
     function holdersCount() external view returns (uint256);
 

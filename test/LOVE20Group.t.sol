@@ -57,7 +57,7 @@ contract LOVE20GroupTest is Test {
     function testInitialization() public view {
         assertEq(group.LOVE20_TOKEN_ADDRESS(), address(love20Token));
         assertEq(group.totalSupply(), 0);
-        assertEq(group.totalBurnedForMint(), 0);
+        assertEq(group.totalMintCost(), 0);
         assertEq(group.name(), "LOVE20 Group");
         assertEq(group.symbol(), "Group");
     }
@@ -149,7 +149,7 @@ contract LOVE20GroupTest is Test {
         assertEq(returnedMintCost, mintCost);
         assertEq(tokenId, 1);
         assertEq(group.totalSupply(), 1);
-        assertEq(group.totalBurnedForMint(), mintCost);
+        assertEq(group.totalMintCost(), mintCost);
         assertEq(group.ownerOf(tokenId), user1);
         assertEq(group.balanceOf(user1), 1);
         assertEq(group.groupNameOf(tokenId), groupName);
@@ -168,7 +168,7 @@ contract LOVE20GroupTest is Test {
         love20Token.approve(address(group), mintCost1);
         (uint256 tokenId1, ) = group.mint(groupName1);
         vm.stopPrank();
-        assertEq(group.totalBurnedForMint(), mintCost1);
+        assertEq(group.totalMintCost(), mintCost1);
 
         // Calculate cost AFTER first mint (cost increases due to burn)
         uint256 mintCost2 = group.calculateMintCost(groupName2);
@@ -182,7 +182,7 @@ contract LOVE20GroupTest is Test {
         assertEq(tokenId1, 1);
         assertEq(tokenId2, 2);
         assertEq(group.totalSupply(), 2);
-        assertEq(group.totalBurnedForMint(), mintCost1 + mintCost2);
+        assertEq(group.totalMintCost(), mintCost1 + mintCost2);
         assertEq(group.ownerOf(tokenId1), user1);
         assertEq(group.ownerOf(tokenId2), user2);
     }
@@ -520,9 +520,9 @@ contract LOVE20GroupTest is Test {
         vm.startPrank(user1);
         love20Token.approve(address(group), mintCost);
 
-        // Expect the GroupMint event with normalizedName
+        // Expect the Mint event with normalizedName
         vm.expectEmit(true, true, false, true, address(group));
-        emit GroupMint({
+        emit Mint({
             tokenId: expectedTokenId,
             owner: user1,
             groupName: groupName,
@@ -535,7 +535,7 @@ contract LOVE20GroupTest is Test {
     }
 
     // Event declaration for testing (with normalizedName field)
-    event GroupMint(
+    event Mint(
         uint256 indexed tokenId,
         address indexed owner,
         string groupName,

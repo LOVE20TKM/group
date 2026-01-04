@@ -99,9 +99,9 @@ echo -e "\033[32m✓\033[0m Group: totalSupply"
 echo -e "  Actual: $actual_supply"
 echo ""
 
-# Check totalBurnedForMint
-actual_burned=$(cast_call $groupAddress "totalBurnedForMint()(uint256)")
-echo -e "\033[32m✓\033[0m Group: totalBurnedForMint"
+# Check totalMintCost
+actual_burned=$(cast_call $groupAddress "totalMintCost()(uint256)")
+echo -e "\033[32m✓\033[0m Group: totalMintCost"
 echo -e "  Actual: $actual_burned"
 echo ""
 
