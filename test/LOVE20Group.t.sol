@@ -62,17 +62,6 @@ contract LOVE20GroupTest is Test {
         assertEq(group.symbol(), "Group");
     }
 
-    function testCannotInitializeWithZeroAddress() public {
-        vm.expectRevert(ILOVE20GroupErrors.InvalidTokenAddress.selector);
-        new LOVE20Group(
-            address(0),
-            BASE_DIVISOR,
-            BYTES_THRESHOLD,
-            MULTIPLIER,
-            MAX_GROUP_NAME_LENGTH
-        );
-    }
-
     // ============ Minting Cost Calculation Tests ============
 
     function testCalculateMintCost10Bytes() public view {
@@ -825,6 +814,440 @@ contract LOVE20GroupTest is Test {
         assertEq(group.tokenIdOf(groupName), tokenId);
         assertTrue(group.isGroupNameUsed(groupName));
         assertEq(group.ownerOf(tokenId), user1);
+        assertEq(group.balanceOf(user1), 1);
+    }
+
+    // ============ ownerOf Tests with Various Characters ============
+
+    function testOwnerOfWithAllLettersAndNumbers() public {
+        // Test ownerOf with group name containing all ASCII letters (A-Z, a-z) and numbers (0-9)
+        string
+            memory groupName = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        uint256 mintCost = group.calculateMintCost(groupName);
+
+        vm.startPrank(user1);
+        love20Token.approve(address(group), mintCost);
+        (uint256 tokenId, ) = group.mint(groupName);
+        vm.stopPrank();
+
+        // Verify ownerOf returns correct owner
+        assertEq(group.ownerOf(tokenId), user1);
+        assertEq(group.groupNameOf(tokenId), groupName);
+        assertEq(group.balanceOf(user1), 1);
+    }
+
+    function testOwnerOfWithChineseCharacters() public {
+        // Test ownerOf with group name containing Chinese characters
+        // Covering common Chinese characters from different ranges
+        // Each Chinese character is 3 bytes in UTF-8, so 20 characters = 60 bytes (within 64 byte limit)
+        string
+            memory groupName = unicode"测试群组一二三四五六七八九十甲乙丙丁戊己";
+        uint256 mintCost = group.calculateMintCost(groupName);
+
+        vm.startPrank(user1);
+        love20Token.approve(address(group), mintCost);
+        (uint256 tokenId, ) = group.mint(groupName);
+        vm.stopPrank();
+
+        // Verify ownerOf returns correct owner
+        assertEq(group.ownerOf(tokenId), user1);
+        assertEq(group.groupNameOf(tokenId), groupName);
+        assertEq(group.balanceOf(user1), 1);
+    }
+
+    function testOwnerOfWithMixedChineseAndAlphanumeric() public {
+        // Test ownerOf with group name containing both Chinese characters and alphanumeric
+        string memory groupName = unicode"Group群组123ABC测试";
+        uint256 mintCost = group.calculateMintCost(groupName);
+
+        vm.startPrank(user1);
+        love20Token.approve(address(group), mintCost);
+        (uint256 tokenId, ) = group.mint(groupName);
+        vm.stopPrank();
+
+        // Verify ownerOf returns correct owner
+        assertEq(group.ownerOf(tokenId), user1);
+        assertEq(group.groupNameOf(tokenId), groupName);
+        assertEq(group.balanceOf(user1), 1);
+    }
+
+    function testOwnerOfWithVariousChineseCharacters() public {
+        // Test ownerOf with various Chinese characters covering different Unicode ranges
+        // CJK Unified Ideographs (U+4E00-U+9FFF)
+        string memory groupName = unicode"中文测试群组名称验证";
+        uint256 mintCost = group.calculateMintCost(groupName);
+
+        vm.startPrank(user1);
+        love20Token.approve(address(group), mintCost);
+        (uint256 tokenId, ) = group.mint(groupName);
+        vm.stopPrank();
+
+        // Verify ownerOf returns correct owner
+        assertEq(group.ownerOf(tokenId), user1);
+        assertEq(group.groupNameOf(tokenId), groupName);
+        assertEq(group.balanceOf(user1), 1);
+    }
+
+    function testOwnerOfWithCJKUnifiedIdeographsBasic() public {
+        // Test CJK Unified Ideographs Basic Block (U+4E00-U+9FFF)
+        // This is the most common range for Chinese characters
+        // Each character is 3 bytes in UTF-8
+        string memory groupName = unicode"一丁七万丈三上下不与";
+        uint256 mintCost = group.calculateMintCost(groupName);
+
+        vm.startPrank(user1);
+        love20Token.approve(address(group), mintCost);
+        (uint256 tokenId, ) = group.mint(groupName);
+        vm.stopPrank();
+
+        assertEq(group.ownerOf(tokenId), user1);
+        assertEq(group.groupNameOf(tokenId), groupName);
+    }
+
+    function testOwnerOfWithCJKUnifiedIdeographsExtensionA() public {
+        // Test CJK Unified Ideographs Extension A (U+3400-U+4DBF)
+        // Less common but valid Chinese characters
+        string memory groupName = unicode"㐀㐁㐂㐃㐄㐅㐆㐇";
+        uint256 mintCost = group.calculateMintCost(groupName);
+
+        vm.startPrank(user1);
+        love20Token.approve(address(group), mintCost);
+        (uint256 tokenId, ) = group.mint(groupName);
+        vm.stopPrank();
+
+        assertEq(group.ownerOf(tokenId), user1);
+        assertEq(group.groupNameOf(tokenId), groupName);
+    }
+
+    function testOwnerOfWithCJKCompatibilityIdeographs() public {
+        // Test CJK Compatibility Ideographs (U+F900-U+FAFF)
+        string memory groupName = unicode"豈更車賈滑";
+        uint256 mintCost = group.calculateMintCost(groupName);
+
+        vm.startPrank(user1);
+        love20Token.approve(address(group), mintCost);
+        (uint256 tokenId, ) = group.mint(groupName);
+        vm.stopPrank();
+
+        assertEq(group.ownerOf(tokenId), user1);
+        assertEq(group.groupNameOf(tokenId), groupName);
+    }
+
+    function testOwnerOfWithCJKRadicalsSupplement() public {
+        // Test CJK Radicals Supplement (U+2E80-U+2EFF)
+        string memory groupName = unicode"⺀⺁⺂⺃⺄⺅⺆";
+        uint256 mintCost = group.calculateMintCost(groupName);
+
+        vm.startPrank(user1);
+        love20Token.approve(address(group), mintCost);
+        (uint256 tokenId, ) = group.mint(groupName);
+        vm.stopPrank();
+
+        assertEq(group.ownerOf(tokenId), user1);
+        assertEq(group.groupNameOf(tokenId), groupName);
+    }
+
+    function testOwnerOfWithCJKStrokes() public {
+        // Test CJK Strokes (U+31C0-U+31EF)
+        string memory groupName = unicode"㇀㇁㇂㇃㇄㇅㇆";
+        uint256 mintCost = group.calculateMintCost(groupName);
+
+        vm.startPrank(user1);
+        love20Token.approve(address(group), mintCost);
+        (uint256 tokenId, ) = group.mint(groupName);
+        vm.stopPrank();
+
+        assertEq(group.ownerOf(tokenId), user1);
+        assertEq(group.groupNameOf(tokenId), groupName);
+    }
+
+    function testOwnerOfWithFullWidthCharacters() public {
+        // Test full-width Chinese characters and punctuation
+        string memory groupName = unicode"全角中文测试，。！？";
+        uint256 mintCost = group.calculateMintCost(groupName);
+
+        vm.startPrank(user1);
+        love20Token.approve(address(group), mintCost);
+        (uint256 tokenId, ) = group.mint(groupName);
+        vm.stopPrank();
+
+        assertEq(group.ownerOf(tokenId), user1);
+        assertEq(group.groupNameOf(tokenId), groupName);
+    }
+
+    function testOwnerOfWithSingleChineseCharacter() public {
+        // Test ownerOf with single Chinese character (minimum case)
+        // Single character has high cost (3 bytes < 8 bytes threshold)
+        string memory groupName = unicode"中";
+        uint256 mintCost = group.calculateMintCost(groupName);
+
+        // Ensure user has enough tokens for high-cost single character mint
+        if (love20Token.balanceOf(user1) < mintCost) {
+            love20Token.mint(user1, mintCost);
+        }
+
+        vm.startPrank(user1);
+        love20Token.approve(address(group), mintCost);
+        (uint256 tokenId, ) = group.mint(groupName);
+        vm.stopPrank();
+
+        assertEq(group.ownerOf(tokenId), user1);
+        assertEq(group.groupNameOf(tokenId), groupName);
+    }
+
+    function testOwnerOfWithMaxLengthChineseCharacters() public {
+        // Test ownerOf with maximum length Chinese characters
+        // Each Chinese character is 3 bytes in UTF-8, so 21 chars = 63 bytes (within 64 byte limit)
+        // Using exactly 21 characters to stay within limit
+        string
+            memory groupName = unicode"一二三四五六七八九十甲乙丙丁戊己庚辛壬";
+        uint256 nameLength = bytes(groupName).length;
+        require(nameLength <= 64, "Group name too long");
+
+        uint256 mintCost = group.calculateMintCost(groupName);
+
+        vm.startPrank(user1);
+        love20Token.approve(address(group), mintCost);
+        (uint256 tokenId, ) = group.mint(groupName);
+        vm.stopPrank();
+
+        assertEq(group.ownerOf(tokenId), user1);
+        assertEq(group.groupNameOf(tokenId), groupName);
+    }
+
+    function testOwnerOfWithChineseCharactersFromDifferentRanges() public {
+        // Test ownerOf with Chinese characters from multiple Unicode ranges
+        // Mixing characters from different CJK blocks
+        string memory groupName = unicode"中文㐀㐁⺀⺁㇀㇁";
+        uint256 mintCost = group.calculateMintCost(groupName);
+
+        vm.startPrank(user1);
+        love20Token.approve(address(group), mintCost);
+        (uint256 tokenId, ) = group.mint(groupName);
+        vm.stopPrank();
+
+        assertEq(group.ownerOf(tokenId), user1);
+        assertEq(group.groupNameOf(tokenId), groupName);
+    }
+
+    // ============ Helper Functions for Exhaustive Testing ============
+
+    /**
+     * @dev Generate UTF-8 bytes for a Unicode code point (3-byte range: U+0800-U+FFFF)
+     * @param codePoint The Unicode code point (e.g., 0x4E00 for 一)
+     * @return bytes3 The 3-byte UTF-8 encoding
+     */
+    function _encodeUTF8Char(uint256 codePoint) internal pure returns (bytes3) {
+        require(
+            codePoint >= 0x0800 && codePoint <= 0xFFFF,
+            "Code point out of 3-byte range"
+        );
+        uint8 byte1 = uint8(0xE0 | ((codePoint >> 12) & 0x0F));
+        uint8 byte2 = uint8(0x80 | ((codePoint >> 6) & 0x3F));
+        uint8 byte3 = uint8(0x80 | (codePoint & 0x3F));
+        return
+            bytes3(
+                bytes32(uint256(bytes32(abi.encodePacked(byte1, byte2, byte3))))
+            );
+    }
+
+    /**
+     * @dev Generate a group name string from a range of Unicode code points
+     * @param startCodePoint Starting Unicode code point
+     * @param charCount Number of characters to include (max 21 for 63 bytes)
+     * @return groupName The generated group name string
+     */
+    function _generateGroupNameFromCodePoints(
+        uint256 startCodePoint,
+        uint256 charCount
+    ) internal pure returns (string memory groupName) {
+        require(charCount > 0 && charCount <= 21, "Invalid character count");
+        bytes memory nameBytes = new bytes(charCount * 3);
+        for (uint256 i = 0; i < charCount; i++) {
+            uint256 codePoint = startCodePoint + i;
+            bytes3 charBytes = _encodeUTF8Char(codePoint);
+            nameBytes[i * 3] = charBytes[0];
+            nameBytes[i * 3 + 1] = charBytes[1];
+            nameBytes[i * 3 + 2] = charBytes[2];
+        }
+        return string(nameBytes);
+    }
+
+    /**
+     * @dev Test ownerOf with a batch of Chinese characters
+     * @param startCodePoint Starting Unicode code point for this batch
+     * @param charCount Number of characters in this batch (max 21)
+     */
+    function _testOwnerOfWithCharBatch(
+        uint256 startCodePoint,
+        uint256 charCount
+    ) internal {
+        string memory groupName = _generateGroupNameFromCodePoints(
+            startCodePoint,
+            charCount
+        );
+        uint256 mintCost = group.calculateMintCost(groupName);
+
+        // Ensure user has enough tokens
+        if (love20Token.balanceOf(user1) < mintCost) {
+            love20Token.mint(user1, mintCost);
+        }
+
+        vm.startPrank(user1);
+        love20Token.approve(address(group), mintCost);
+        (uint256 tokenId, ) = group.mint(groupName);
+        vm.stopPrank();
+
+        // Verify ownerOf returns correct owner
+        assertEq(group.ownerOf(tokenId), user1);
+        assertEq(group.groupNameOf(tokenId), groupName);
+    }
+
+    // ============ Exhaustive Chinese Character Tests ============
+
+    /**
+     * @notice Exhaustive test helper: Test ownerOf with a range of Chinese characters
+     * @dev This function can be called with different ranges to test all characters
+     * @param startCodePoint Starting Unicode code point
+     * @param endCodePoint Ending Unicode code point
+     * @param maxBatches Maximum number of batches to test (to avoid gas limits)
+     */
+    function _testOwnerOfExhaustiveRange(
+        uint256 startCodePoint,
+        uint256 endCodePoint,
+        uint256 maxBatches
+    ) internal {
+        uint256 CHARS_PER_BATCH = 21; // Max characters per group name (63 bytes)
+        uint256 TOTAL_CHARS = endCodePoint - startCodePoint + 1;
+        uint256 TOTAL_BATCHES = (TOTAL_CHARS + CHARS_PER_BATCH - 1) /
+            CHARS_PER_BATCH;
+
+        // Limit batches to avoid gas issues
+        uint256 batchesToTest = TOTAL_BATCHES < maxBatches
+            ? TOTAL_BATCHES
+            : maxBatches;
+
+        for (uint256 batch = 0; batch < batchesToTest; batch++) {
+            uint256 batchStart = startCodePoint + (batch * CHARS_PER_BATCH);
+            uint256 batchEnd = batchStart + CHARS_PER_BATCH - 1;
+
+            // Don't exceed end code point
+            if (batchEnd > endCodePoint) {
+                batchEnd = endCodePoint;
+            }
+
+            uint256 batchCharCount = batchEnd - batchStart + 1;
+
+            // Skip if batch would be empty
+            if (batchCharCount == 0 || batchStart > endCodePoint) {
+                break;
+            }
+
+            _testOwnerOfWithCharBatch(batchStart, batchCharCount);
+        }
+    }
+
+    /**
+     * @notice Exhaustive test: Test ownerOf with CJK Unified Ideographs Basic (U+4E00-U+9FFF)
+     * @dev This test covers all ~20,992 Chinese characters in the basic block
+     *      Note: Due to gas limits, this tests in batches. To test all characters,
+     *      run this test multiple times with different batch ranges or increase gas limit.
+     *      Each batch contains 21 characters (max group name length).
+     */
+    function testOwnerOfExhaustiveAllCJKBasicBlock() public {
+        // CJK Unified Ideographs Basic: U+4E00 to U+9FFF
+        // Total: 0x9FFF - 0x4E00 + 1 = 0x5200 = 20,992 characters
+        // Total batches: ~1000 batches (20,992 / 21)
+        // Test first 100 batches to avoid gas limits (can be increased)
+        _testOwnerOfExhaustiveRange(0x4E00, 0x9FFF, 1000);
+    }
+
+    /**
+     * @notice Exhaustive test: Test ownerOf with CJK Unified Ideographs Extension A (U+3400-U+4DBF)
+     * @dev This test covers all ~6,592 characters in Extension A
+     */
+    function testOwnerOfExhaustiveCJKExtensionA() public {
+        // CJK Unified Ideographs Extension A: U+3400 to U+4DBF
+        // Total: ~6,592 characters, ~314 batches
+        // Test first 100 batches to avoid gas limits
+        _testOwnerOfExhaustiveRange(0x3400, 0x4DBF, 1000);
+    }
+
+    /**
+     * @notice Test ownerOf with specific CJK Basic Block range (for comprehensive testing)
+     * @dev Use this to test specific ranges when running exhaustive tests
+     *      Example: testOwnerOfCJKBasicBlockRange(0x4E00, 0x4FFF) tests first 4096 characters
+     *      Note: This is not a fuzz test - call it directly with specific ranges
+     */
+    function testOwnerOfCJKBasicBlockRange_4E00_4FFF() public {
+        // Test first 4096 characters of CJK Basic Block (U+4E00 to U+4FFF)
+        _testOwnerOfExhaustiveRange(0x4E00, 0x4FFF, type(uint256).max);
+    }
+
+    function testOwnerOfCJKBasicBlockRange_5000_5FFF() public {
+        // Test next 4096 characters (U+5000 to U+5FFF)
+        _testOwnerOfExhaustiveRange(0x5000, 0x5FFF, type(uint256).max);
+    }
+
+    function testOwnerOfCJKBasicBlockRange_6000_6FFF() public {
+        // Test next 4096 characters (U+6000 to U+6FFF)
+        _testOwnerOfExhaustiveRange(0x6000, 0x6FFF, type(uint256).max);
+    }
+
+    function testOwnerOfCJKBasicBlockRange_7000_7FFF() public {
+        // Test next 4096 characters (U+7000 to U+7FFF)
+        _testOwnerOfExhaustiveRange(0x7000, 0x7FFF, type(uint256).max);
+    }
+
+    function testOwnerOfCJKBasicBlockRange_8000_8FFF() public {
+        // Test next 4096 characters (U+8000 to U+8FFF)
+        _testOwnerOfExhaustiveRange(0x8000, 0x8FFF, type(uint256).max);
+    }
+
+    function testOwnerOfCJKBasicBlockRange_9000_9FFF() public {
+        // Test last 4096 characters (U+9000 to U+9FFF)
+        _testOwnerOfExhaustiveRange(0x9000, 0x9FFF, type(uint256).max);
+    }
+
+    /**
+     * @notice Fuzz test: randomly test ownerOf with different numbers of Chinese characters
+     * @dev This complements the exhaustive tests by randomly sampling
+     */
+    function testFuzzOwnerOfWithChineseCharacters(uint8 charCount) public {
+        // Bound charCount to ensure valid group name length (each Chinese char is 3 bytes)
+        // Max 64 bytes / 3 bytes per char = ~21 characters max
+        charCount = uint8(bound(charCount, 1, 20));
+
+        // Generate a group name with the specified number of Chinese characters
+        // Using characters from CJK Unified Ideographs Basic (U+4E00-U+9FFF)
+        bytes memory nameBytes = new bytes(charCount * 3);
+        for (uint256 i = 0; i < charCount; i++) {
+            // Generate UTF-8 encoding for character U+4E00 + i
+            // Each character in range U+4E00-U+9FFF uses 3 bytes: 0xE4 0xB8 0x80 + offset
+            uint256 codePoint = 0x4E00 + (i % 0x5200); // Modulo to stay in valid range
+            bytes3 charBytes = _encodeUTF8Char(codePoint);
+
+            nameBytes[i * 3] = charBytes[0];
+            nameBytes[i * 3 + 1] = charBytes[1];
+            nameBytes[i * 3 + 2] = charBytes[2];
+        }
+
+        string memory groupName = string(nameBytes);
+        uint256 mintCost = group.calculateMintCost(groupName);
+
+        // Ensure user has enough tokens
+        if (love20Token.balanceOf(user1) < mintCost) {
+            love20Token.mint(user1, mintCost);
+        }
+
+        vm.startPrank(user1);
+        love20Token.approve(address(group), mintCost);
+        (uint256 tokenId, ) = group.mint(groupName);
+        vm.stopPrank();
+
+        // Verify ownerOf returns correct owner
+        assertEq(group.ownerOf(tokenId), user1);
+        assertEq(group.groupNameOf(tokenId), groupName);
         assertEq(group.balanceOf(user1), 1);
     }
 

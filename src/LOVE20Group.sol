@@ -56,14 +56,6 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
         uint256 multiplier_,
         uint256 maxGroupNameLength_
     ) ERC721("LOVE20 Group", "Group") {
-        if (love20Token_ == address(0)) revert InvalidTokenAddress();
-        if (baseDivisor_ == 0) revert InvalidParameter();
-        if (bytesThreshold_ == 0) revert InvalidParameter();
-        if (multiplier_ < 2) revert InvalidParameter();
-        if (maxGroupNameLength_ == 0) {
-            revert InvalidParameter();
-        }
-
         LOVE20_TOKEN_ADDRESS = love20Token_;
         BASE_DIVISOR = baseDivisor_;
         BYTES_THRESHOLD = bytesThreshold_;
@@ -108,10 +100,11 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
         _normalizedNameToTokenId[normalizedName] = tokenId;
 
         if (mintCost > 0) {
+            totalMintCost += mintCost;
+
             ILOVE20Token token = ILOVE20Token(LOVE20_TOKEN_ADDRESS);
             token.transferFrom(msg.sender, address(this), mintCost);
             token.burn(mintCost);
-            totalMintCost += mintCost;
         }
 
         emit Mint({

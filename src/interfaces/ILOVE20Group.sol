@@ -12,8 +12,6 @@ interface ILOVE20GroupEvents {
 }
 
 interface ILOVE20GroupErrors {
-    error InvalidTokenAddress();
-    error InvalidParameter();
     error GroupNameAlreadyExists();
     error GroupNameEmpty();
     error InvalidGroupName();
