@@ -37,7 +37,10 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
     // all holder addresses
     address[] internal _allHolders;
 
-    // holderAddress => index in _allHolders array (1-based, 0 means not in array)
+    // holderAddress => whether the holder exists in the array
+    mapping(address => bool) internal _isHolder;
+
+    // holderAddress => index in _allHolders array (0-based, only valid when _isHolder is true)
     mapping(address => uint256) internal _holderIndex;
 
     // ============ Constructor ============
@@ -150,13 +153,12 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
     /**
      * @notice Get the group name for a token ID
      * @param tokenId The token ID to query
-     * @return The group name associated with the token ID
+     * @return The group name associated with the token ID (empty string if token doesn't exist)
      */
     function groupNameOf(
         uint256 tokenId
     ) external view returns (string memory) {
-        if (_exists(tokenId)) return _groupNames[tokenId];
-        else return "";
+        return _groupNames[tokenId];
     }
 
     /**
@@ -219,9 +221,11 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
      * @param holder The address to add
      */
     function _addHolder(address holder) internal {
-        if (_holderIndex[holder] == 0 && holder != address(0)) {
+        if (!_isHolder[holder] && holder != address(0)) {
+            uint256 index = _allHolders.length;
             _allHolders.push(holder);
-            _holderIndex[holder] = _allHolders.length; // 1-based index
+            _holderIndex[holder] = index; // 0-based index
+            _isHolder[holder] = true;
         }
     }
 
@@ -230,17 +234,18 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
      * @param holder The address to remove
      */
     function _removeHolder(address holder) internal {
-        uint256 index = _holderIndex[holder];
-        if (index == 0) return; // Not in array
+        if (!_isHolder[holder]) return; // Not in array
 
-        uint256 lastIndex = _allHolders.length;
+        uint256 index = _holderIndex[holder];
+        uint256 lastIndex = _allHolders.length - 1;
+
         if (index != lastIndex) {
-            address lastHolder = _allHolders[lastIndex - 1];
-            _allHolders[index - 1] = lastHolder; // Convert to 0-based
+            address lastHolder = _allHolders[lastIndex];
+            _allHolders[index] = lastHolder;
             _holderIndex[lastHolder] = index;
         }
         _allHolders.pop();
-        _holderIndex[holder] = 0;
+        _isHolder[holder] = false;
     }
 
     /**
