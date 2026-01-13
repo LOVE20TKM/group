@@ -146,6 +146,253 @@ contract LOVE20GroupTest is Test {
         assertEq(group.tokenIdOf(groupName), tokenId);
     }
 
+    // ============ Symbol Prefix Tests ============
+
+    function testMintWithTestSymbolPrefix() public {
+        // Deploy a new token with "Test" prefix symbol
+        MockLOVE20Token testToken = new MockLOVE20Token(
+            "TestToken",
+            "TestToken",
+            MAX_SUPPLY
+        );
+        LOVE20Group testGroup = new LOVE20Group(
+            address(testToken),
+            BASE_DIVISOR,
+            BYTES_THRESHOLD,
+            MULTIPLIER,
+            MAX_GROUP_NAME_LENGTH
+        );
+
+        // Mint tokens to user
+        testToken.mint(user1, 1_000_000 * 1e18);
+
+        string memory originalGroupName = "MyGroup";
+        // Expected group name should have "Test" prefix added
+        string memory expectedGroupName = "TestMyGroup";
+        uint256 mintCost = testGroup.calculateMintCost(expectedGroupName);
+
+        vm.startPrank(user1);
+        testToken.approve(address(testGroup), mintCost);
+        (uint256 tokenId, ) = testGroup.mint(originalGroupName);
+        vm.stopPrank();
+
+        // Verify the group name has "Test" prefix
+        assertEq(testGroup.groupNameOf(tokenId), expectedGroupName);
+        assertTrue(testGroup.isGroupNameUsed(expectedGroupName));
+        assertEq(testGroup.tokenIdOf(expectedGroupName), tokenId);
+        // Original name should not be registered
+        assertEq(testGroup.tokenIdOf(originalGroupName), 0);
+        assertFalse(testGroup.isGroupNameUsed(originalGroupName));
+    }
+
+    function testMintWithTestSymbolExactMatch() public {
+        // Deploy a new token with symbol exactly "Test"
+        MockLOVE20Token testToken = new MockLOVE20Token(
+            "Test",
+            "Test",
+            MAX_SUPPLY
+        );
+        LOVE20Group testGroup = new LOVE20Group(
+            address(testToken),
+            BASE_DIVISOR,
+            BYTES_THRESHOLD,
+            MULTIPLIER,
+            MAX_GROUP_NAME_LENGTH
+        );
+
+        testToken.mint(user1, 1_000_000 * 1e18);
+
+        string memory originalGroupName = "Group123";
+        string memory expectedGroupName = "TestGroup123";
+        uint256 mintCost = testGroup.calculateMintCost(expectedGroupName);
+
+        vm.startPrank(user1);
+        testToken.approve(address(testGroup), mintCost);
+        (uint256 tokenId, ) = testGroup.mint(originalGroupName);
+        vm.stopPrank();
+
+        assertEq(testGroup.groupNameOf(tokenId), expectedGroupName);
+    }
+
+    function testMintWithTestSymbolLongName() public {
+        // Deploy a new token with "Test" prefix symbol
+        MockLOVE20Token testToken = new MockLOVE20Token(
+            "TestToken",
+            "TestToken",
+            MAX_SUPPLY
+        );
+        LOVE20Group testGroup = new LOVE20Group(
+            address(testToken),
+            BASE_DIVISOR,
+            BYTES_THRESHOLD,
+            MULTIPLIER,
+            MAX_GROUP_NAME_LENGTH
+        );
+
+        testToken.mint(user1, 1_000_000 * 1e18);
+
+        string memory originalGroupName = "VeryLongGroupName123456789";
+        string memory expectedGroupName = "TestVeryLongGroupName123456789";
+        uint256 mintCost = testGroup.calculateMintCost(expectedGroupName);
+
+        vm.startPrank(user1);
+        testToken.approve(address(testGroup), mintCost);
+        (uint256 tokenId, ) = testGroup.mint(originalGroupName);
+        vm.stopPrank();
+
+        assertEq(testGroup.groupNameOf(tokenId), expectedGroupName);
+    }
+
+    function testMintWithoutTestSymbolPrefix() public {
+        // Use default token with "LOVE" symbol (no "Test" prefix)
+        string memory groupName = "MyGroup";
+        uint256 mintCost = group.calculateMintCost(groupName);
+
+        vm.startPrank(user1);
+        love20Token.approve(address(group), mintCost);
+        (uint256 tokenId, ) = group.mint(groupName);
+        vm.stopPrank();
+
+        // Group name should NOT have "Test" prefix
+        assertEq(group.groupNameOf(tokenId), groupName);
+        assertEq(group.groupNameOf(tokenId), "MyGroup");
+        assertFalse(group.isGroupNameUsed("TestMyGroup"));
+    }
+
+    function testMintWithTestSymbolLowerCase() public {
+        // Deploy a new token with lowercase "test" symbol (should NOT match)
+        MockLOVE20Token testToken = new MockLOVE20Token(
+            "testToken",
+            "testToken",
+            MAX_SUPPLY
+        );
+        LOVE20Group testGroup = new LOVE20Group(
+            address(testToken),
+            BASE_DIVISOR,
+            BYTES_THRESHOLD,
+            MULTIPLIER,
+            MAX_GROUP_NAME_LENGTH
+        );
+
+        testToken.mint(user1, 1_000_000 * 1e18);
+
+        string memory originalGroupName = "MyGroup";
+        uint256 mintCost = testGroup.calculateMintCost(originalGroupName);
+
+        vm.startPrank(user1);
+        testToken.approve(address(testGroup), mintCost);
+        (uint256 tokenId, ) = testGroup.mint(originalGroupName);
+        vm.stopPrank();
+
+        // Group name should NOT have "Test" prefix (lowercase doesn't match)
+        assertEq(testGroup.groupNameOf(tokenId), originalGroupName);
+        assertEq(testGroup.groupNameOf(tokenId), "MyGroup");
+    }
+
+    function testMintWithTestSymbolShortSymbol() public {
+        // Deploy a new token with symbol shorter than 4 bytes (should NOT match)
+        MockLOVE20Token testToken = new MockLOVE20Token(
+            "ABC",
+            "ABC",
+            MAX_SUPPLY
+        );
+        LOVE20Group testGroup = new LOVE20Group(
+            address(testToken),
+            BASE_DIVISOR,
+            BYTES_THRESHOLD,
+            MULTIPLIER,
+            MAX_GROUP_NAME_LENGTH
+        );
+
+        testToken.mint(user1, 1_000_000 * 1e18);
+
+        string memory originalGroupName = "MyGroup";
+        uint256 mintCost = testGroup.calculateMintCost(originalGroupName);
+
+        vm.startPrank(user1);
+        testToken.approve(address(testGroup), mintCost);
+        (uint256 tokenId, ) = testGroup.mint(originalGroupName);
+        vm.stopPrank();
+
+        // Group name should NOT have "Test" prefix
+        assertEq(testGroup.groupNameOf(tokenId), originalGroupName);
+    }
+
+    function testMintWithTestSymbolPartialMatch() public {
+        // Deploy a new token with symbol that starts with "Tes" but not "Test"
+        // This should NOT match because bytes4("Test") != bytes4("TesX")
+        MockLOVE20Token testToken = new MockLOVE20Token(
+            "TesToken",
+            "TesToken",
+            MAX_SUPPLY
+        );
+        LOVE20Group testGroup = new LOVE20Group(
+            address(testToken),
+            BASE_DIVISOR,
+            BYTES_THRESHOLD,
+            MULTIPLIER,
+            MAX_GROUP_NAME_LENGTH
+        );
+
+        testToken.mint(user1, 1_000_000 * 1e18);
+
+        string memory originalGroupName = "MyGroup";
+        uint256 mintCost = testGroup.calculateMintCost(originalGroupName);
+
+        vm.startPrank(user1);
+        testToken.approve(address(testGroup), mintCost);
+        (uint256 tokenId, ) = testGroup.mint(originalGroupName);
+        vm.stopPrank();
+
+        // Group name should NOT have "Test" prefix (partial match doesn't count)
+        assertEq(testGroup.groupNameOf(tokenId), originalGroupName);
+    }
+
+    function testMintWithTestSymbolMultipleMints() public {
+        // Test multiple mints with "Test" prefix symbol
+        MockLOVE20Token testToken = new MockLOVE20Token(
+            "TestToken",
+            "TestToken",
+            MAX_SUPPLY
+        );
+        LOVE20Group testGroup = new LOVE20Group(
+            address(testToken),
+            BASE_DIVISOR,
+            BYTES_THRESHOLD,
+            MULTIPLIER,
+            MAX_GROUP_NAME_LENGTH
+        );
+
+        testToken.mint(user1, 1_000_000 * 1e18);
+        testToken.mint(user2, 1_000_000 * 1e18);
+
+        string memory groupName1 = "Group1";
+        string memory groupName2 = "Group2";
+        string memory expectedName1 = "TestGroup1";
+        string memory expectedName2 = "TestGroup2";
+
+        uint256 mintCost1 = testGroup.calculateMintCost(expectedName1);
+
+        vm.startPrank(user1);
+        testToken.approve(address(testGroup), mintCost1);
+        (uint256 tokenId1, ) = testGroup.mint(groupName1);
+        vm.stopPrank();
+
+        // Recalculate cost after first mint (cost increases due to burn)
+        uint256 mintCost2 = testGroup.calculateMintCost(expectedName2);
+
+        vm.startPrank(user2);
+        testToken.approve(address(testGroup), mintCost2);
+        (uint256 tokenId2, ) = testGroup.mint(groupName2);
+        vm.stopPrank();
+
+        // Both should have "Test" prefix
+        assertEq(testGroup.groupNameOf(tokenId1), expectedName1);
+        assertEq(testGroup.groupNameOf(tokenId2), expectedName2);
+        assertTrue(testGroup.isGroupNameUsed(expectedName1));
+        assertTrue(testGroup.isGroupNameUsed(expectedName2));
+    }
+
     function testMintMultiple() public {
         string memory groupName1 = "FirstGroupName";
         string memory groupName2 = "SecondGroupName";

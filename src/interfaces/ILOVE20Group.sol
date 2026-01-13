@@ -34,7 +34,7 @@ interface ILOVE20Group is ILOVE20GroupEvents, ILOVE20GroupErrors {
     ) external returns (uint256 tokenId, uint256 mintCost);
 
     function calculateMintCost(
-        string calldata groupName
+        string memory groupName
     ) external view returns (uint256);
 
     function groupNameOf(uint256 tokenId) external view returns (string memory);

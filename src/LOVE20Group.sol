@@ -76,11 +76,12 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
      * @return tokenId The newly minted token ID
      */
     function mint(
-        string calldata groupName
+        string memory groupName
     ) external returns (uint256 tokenId, uint256 mintCost) {
-        if (
-            LOVE20_TOKEN_ADDRESS != "0x6458E25680765Add4e2ca8d5a31fA08f5e1b6e4a"
-        ) {
+        bytes4 prefix = bytes4(
+            bytes(ILOVE20Token(LOVE20_TOKEN_ADDRESS).symbol())
+        );
+        if (prefix == bytes4("Test")) {
             groupName = string(abi.encodePacked("Test", groupName));
         }
 
@@ -137,7 +138,7 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
      * @return The cost in LOVE20 tokens
      */
     function calculateMintCost(
-        string calldata groupName
+        string memory groupName
     ) public view returns (uint256) {
         ILOVE20Token token = ILOVE20Token(LOVE20_TOKEN_ADDRESS);
 
