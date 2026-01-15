@@ -5,6 +5,10 @@ import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {
     ERC721Enumerable
 } from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+import {
+    SafeERC20,
+    IERC20
+} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ILOVE20Group} from "./interfaces/ILOVE20Group.sol";
 import {ILOVE20Token} from "./interfaces/ILOVE20Token.sol";
 
@@ -14,6 +18,7 @@ import {ILOVE20Token} from "./interfaces/ILOVE20Token.sol";
  * @dev Each Group represents ownership of a group in the LOVE20 ecosystem
  */
 contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
+    using SafeERC20 for IERC20;
     // ============ Immutable Parameters ============
 
     address public immutable LOVE20_TOKEN_ADDRESS;
@@ -105,17 +110,18 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
         }
 
         tokenId = _nextTokenId++;
-        _safeMint(to, tokenId);
         _groupNames[tokenId] = groupName;
         _normalizedNameToTokenId[normalizedName] = tokenId;
 
         if (mintCost > 0) {
             totalMintCost += mintCost;
 
-            ILOVE20Token token = ILOVE20Token(LOVE20_TOKEN_ADDRESS);
-            token.transferFrom(msg.sender, address(this), mintCost);
-            token.burn(mintCost);
+            IERC20 token = IERC20(LOVE20_TOKEN_ADDRESS);
+            token.safeTransferFrom(msg.sender, address(this), mintCost);
+            ILOVE20Token(LOVE20_TOKEN_ADDRESS).burn(mintCost);
         }
+
+        _safeMint(to, tokenId);
 
         emit Mint({
             tokenId: tokenId,
