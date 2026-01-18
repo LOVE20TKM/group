@@ -35,6 +35,16 @@ contract UnicodeWhitespaceTest is Test {
         love20Token.mint(user1, 1_000_000 * 1e18);
     }
 
+    // Helper function to expect GroupNameInvalidCharacters error
+    function _expectInvalidChars(string memory groupName) internal {
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ILOVE20GroupErrors.GroupNameInvalidCharacters.selector,
+                groupName
+            )
+        );
+    }
+
     // ============ Unicode Whitespace Tests ============
 
     function testCannotMintWithNoBreakSpace() public {
@@ -42,7 +52,7 @@ contract UnicodeWhitespaceTest is Test {
         string memory groupName = unicode"Group\u00A0Name";
 
         vm.startPrank(user1);
-        vm.expectRevert(ILOVE20GroupErrors.InvalidGroupName.selector);
+        _expectInvalidChars(groupName);
         group.mint(groupName);
         vm.stopPrank();
     }
@@ -52,7 +62,7 @@ contract UnicodeWhitespaceTest is Test {
         string memory groupName = unicode"Group\u1680Name";
 
         vm.startPrank(user1);
-        vm.expectRevert(ILOVE20GroupErrors.InvalidGroupName.selector);
+        _expectInvalidChars(groupName);
         group.mint(groupName);
         vm.stopPrank();
     }
@@ -62,7 +72,7 @@ contract UnicodeWhitespaceTest is Test {
         string memory groupName = unicode"Group\u2000Name";
 
         vm.startPrank(user1);
-        vm.expectRevert(ILOVE20GroupErrors.InvalidGroupName.selector);
+        _expectInvalidChars(groupName);
         group.mint(groupName);
         vm.stopPrank();
     }
@@ -72,7 +82,7 @@ contract UnicodeWhitespaceTest is Test {
         string memory groupName = unicode"Group\u2001Name";
 
         vm.startPrank(user1);
-        vm.expectRevert(ILOVE20GroupErrors.InvalidGroupName.selector);
+        _expectInvalidChars(groupName);
         group.mint(groupName);
         vm.stopPrank();
     }
@@ -82,7 +92,7 @@ contract UnicodeWhitespaceTest is Test {
         string memory groupName = unicode"Group\u2002Name";
 
         vm.startPrank(user1);
-        vm.expectRevert(ILOVE20GroupErrors.InvalidGroupName.selector);
+        _expectInvalidChars(groupName);
         group.mint(groupName);
         vm.stopPrank();
     }
@@ -92,7 +102,7 @@ contract UnicodeWhitespaceTest is Test {
         string memory groupName = unicode"Group\u2003Name";
 
         vm.startPrank(user1);
-        vm.expectRevert(ILOVE20GroupErrors.InvalidGroupName.selector);
+        _expectInvalidChars(groupName);
         group.mint(groupName);
         vm.stopPrank();
     }
@@ -102,7 +112,7 @@ contract UnicodeWhitespaceTest is Test {
         string memory groupName = unicode"Group\u2004Name";
 
         vm.startPrank(user1);
-        vm.expectRevert(ILOVE20GroupErrors.InvalidGroupName.selector);
+        _expectInvalidChars(groupName);
         group.mint(groupName);
         vm.stopPrank();
     }
@@ -112,7 +122,7 @@ contract UnicodeWhitespaceTest is Test {
         string memory groupName = unicode"Group\u2005Name";
 
         vm.startPrank(user1);
-        vm.expectRevert(ILOVE20GroupErrors.InvalidGroupName.selector);
+        _expectInvalidChars(groupName);
         group.mint(groupName);
         vm.stopPrank();
     }
@@ -122,7 +132,7 @@ contract UnicodeWhitespaceTest is Test {
         string memory groupName = unicode"Group\u2006Name";
 
         vm.startPrank(user1);
-        vm.expectRevert(ILOVE20GroupErrors.InvalidGroupName.selector);
+        _expectInvalidChars(groupName);
         group.mint(groupName);
         vm.stopPrank();
     }
@@ -132,7 +142,7 @@ contract UnicodeWhitespaceTest is Test {
         string memory groupName = unicode"Group\u2007Name";
 
         vm.startPrank(user1);
-        vm.expectRevert(ILOVE20GroupErrors.InvalidGroupName.selector);
+        _expectInvalidChars(groupName);
         group.mint(groupName);
         vm.stopPrank();
     }
@@ -142,7 +152,7 @@ contract UnicodeWhitespaceTest is Test {
         string memory groupName = unicode"Group\u2008Name";
 
         vm.startPrank(user1);
-        vm.expectRevert(ILOVE20GroupErrors.InvalidGroupName.selector);
+        _expectInvalidChars(groupName);
         group.mint(groupName);
         vm.stopPrank();
     }
@@ -152,7 +162,7 @@ contract UnicodeWhitespaceTest is Test {
         string memory groupName = unicode"Group\u2009Name";
 
         vm.startPrank(user1);
-        vm.expectRevert(ILOVE20GroupErrors.InvalidGroupName.selector);
+        _expectInvalidChars(groupName);
         group.mint(groupName);
         vm.stopPrank();
     }
@@ -162,7 +172,7 @@ contract UnicodeWhitespaceTest is Test {
         string memory groupName = unicode"Group\u200AName";
 
         vm.startPrank(user1);
-        vm.expectRevert(ILOVE20GroupErrors.InvalidGroupName.selector);
+        _expectInvalidChars(groupName);
         group.mint(groupName);
         vm.stopPrank();
     }
@@ -172,7 +182,7 @@ contract UnicodeWhitespaceTest is Test {
         string memory groupName = unicode"Group\u202FName";
 
         vm.startPrank(user1);
-        vm.expectRevert(ILOVE20GroupErrors.InvalidGroupName.selector);
+        _expectInvalidChars(groupName);
         group.mint(groupName);
         vm.stopPrank();
     }
@@ -182,7 +192,7 @@ contract UnicodeWhitespaceTest is Test {
         string memory groupName = unicode"Group\u205FName";
 
         vm.startPrank(user1);
-        vm.expectRevert(ILOVE20GroupErrors.InvalidGroupName.selector);
+        _expectInvalidChars(groupName);
         group.mint(groupName);
         vm.stopPrank();
     }
@@ -192,7 +202,7 @@ contract UnicodeWhitespaceTest is Test {
         string memory groupName = unicode"Group\u3000Name";
 
         vm.startPrank(user1);
-        vm.expectRevert(ILOVE20GroupErrors.InvalidGroupName.selector);
+        _expectInvalidChars(groupName);
         group.mint(groupName);
         vm.stopPrank();
     }
@@ -202,7 +212,7 @@ contract UnicodeWhitespaceTest is Test {
         string memory groupName = unicode"链群　名称"; // 注意中间是全角空格
 
         vm.startPrank(user1);
-        vm.expectRevert(ILOVE20GroupErrors.InvalidGroupName.selector);
+        _expectInvalidChars(groupName);
         group.mint(groupName);
         vm.stopPrank();
     }
@@ -214,7 +224,7 @@ contract UnicodeWhitespaceTest is Test {
         string memory groupName = unicode"Group\u2028Name";
 
         vm.startPrank(user1);
-        vm.expectRevert(ILOVE20GroupErrors.InvalidGroupName.selector);
+        _expectInvalidChars(groupName);
         group.mint(groupName);
         vm.stopPrank();
     }
@@ -224,7 +234,7 @@ contract UnicodeWhitespaceTest is Test {
         string memory groupName = unicode"Group\u2029Name";
 
         vm.startPrank(user1);
-        vm.expectRevert(ILOVE20GroupErrors.InvalidGroupName.selector);
+        _expectInvalidChars(groupName);
         group.mint(groupName);
         vm.stopPrank();
     }
@@ -236,7 +246,7 @@ contract UnicodeWhitespaceTest is Test {
         string memory groupName = unicode"Group\u061CName";
 
         vm.startPrank(user1);
-        vm.expectRevert(ILOVE20GroupErrors.InvalidGroupName.selector);
+        _expectInvalidChars(groupName);
         group.mint(groupName);
         vm.stopPrank();
     }
@@ -246,7 +256,7 @@ contract UnicodeWhitespaceTest is Test {
         string memory groupName = unicode"Group\u202AName";
 
         vm.startPrank(user1);
-        vm.expectRevert(ILOVE20GroupErrors.InvalidGroupName.selector);
+        _expectInvalidChars(groupName);
         group.mint(groupName);
         vm.stopPrank();
     }
@@ -256,7 +266,7 @@ contract UnicodeWhitespaceTest is Test {
         string memory groupName = unicode"Group\u202BName";
 
         vm.startPrank(user1);
-        vm.expectRevert(ILOVE20GroupErrors.InvalidGroupName.selector);
+        _expectInvalidChars(groupName);
         group.mint(groupName);
         vm.stopPrank();
     }
@@ -266,7 +276,7 @@ contract UnicodeWhitespaceTest is Test {
         string memory groupName = unicode"Group\u202CName";
 
         vm.startPrank(user1);
-        vm.expectRevert(ILOVE20GroupErrors.InvalidGroupName.selector);
+        _expectInvalidChars(groupName);
         group.mint(groupName);
         vm.stopPrank();
     }
@@ -276,7 +286,7 @@ contract UnicodeWhitespaceTest is Test {
         string memory groupName = unicode"Group\u202DName";
 
         vm.startPrank(user1);
-        vm.expectRevert(ILOVE20GroupErrors.InvalidGroupName.selector);
+        _expectInvalidChars(groupName);
         group.mint(groupName);
         vm.stopPrank();
     }
@@ -286,7 +296,7 @@ contract UnicodeWhitespaceTest is Test {
         string memory groupName = unicode"Group\u202EName";
 
         vm.startPrank(user1);
-        vm.expectRevert(ILOVE20GroupErrors.InvalidGroupName.selector);
+        _expectInvalidChars(groupName);
         group.mint(groupName);
         vm.stopPrank();
     }
@@ -298,7 +308,7 @@ contract UnicodeWhitespaceTest is Test {
         string memory groupName = unicode"Group\u0080Name";
 
         vm.startPrank(user1);
-        vm.expectRevert(ILOVE20GroupErrors.InvalidGroupName.selector);
+        _expectInvalidChars(groupName);
         group.mint(groupName);
         vm.stopPrank();
     }

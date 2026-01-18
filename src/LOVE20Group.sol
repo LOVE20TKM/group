@@ -114,8 +114,9 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
 
         // Use normalized (lowercase) name for uniqueness check
         string memory normalizedName = _toLowerCase(groupName);
-        if (_normalizedNameToTokenId[normalizedName] != 0) {
-            revert GroupNameAlreadyExists();
+        uint256 existingTokenId = _normalizedNameToTokenId[normalizedName];
+        if (existingTokenId != 0) {
+            revert GroupNameAlreadyExists(groupName, existingTokenId);
         }
 
         tokenId = _nextTokenId++;
@@ -231,7 +232,7 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
      */
     function holdersAtIndex(uint256 index) external view returns (address) {
         if (index >= _allHolders.length) {
-            revert HolderIndexOutOfBounds();
+            revert HolderIndexOutOfBounds(index, _allHolders.length);
         }
         return _allHolders[index];
     }
@@ -249,7 +250,7 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
             _holderIndex[holder] = index; // 0-based index
             _isHolder[holder] = true;
 
-            emit AddHolder({holder: holder});
+            emit AddHolder({holder: holder, totalHolders: _allHolders.length});
         }
     }
 
@@ -272,7 +273,7 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
         _isHolder[holder] = false;
         delete _holderIndex[holder];
 
-        emit RemoveHolder({holder: holder});
+        emit RemoveHolder({holder: holder, totalHolders: _allHolders.length});
     }
 
     /**
@@ -323,8 +324,10 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
         uint256 len = nameBytes.length;
 
         if (len == 0) revert GroupNameEmpty();
-        if (len > MAX_GROUP_NAME_LENGTH) revert InvalidGroupName();
-        if (!_isValidGroupNameChars(nameBytes)) revert InvalidGroupName();
+        if (len > MAX_GROUP_NAME_LENGTH)
+            revert GroupNameTooLong(len, MAX_GROUP_NAME_LENGTH);
+        if (!_isValidGroupNameChars(nameBytes))
+            revert GroupNameInvalidCharacters(groupName);
     }
 
     /**

@@ -10,16 +10,17 @@ interface ILOVE20GroupEvents {
         uint256 cost
     );
 
-    event AddHolder(address indexed holder);
+    event AddHolder(address indexed holder, uint256 totalHolders);
 
-    event RemoveHolder(address indexed holder);
+    event RemoveHolder(address indexed holder, uint256 totalHolders);
 }
 
 interface ILOVE20GroupErrors {
-    error GroupNameAlreadyExists();
+    error GroupNameAlreadyExists(string groupName, uint256 existingTokenId);
     error GroupNameEmpty();
-    error InvalidGroupName();
-    error HolderIndexOutOfBounds();
+    error GroupNameTooLong(uint256 length, uint256 maxLength);
+    error GroupNameInvalidCharacters(string groupName);
+    error HolderIndexOutOfBounds(uint256 index, uint256 length);
 }
 
 interface ILOVE20Group is ILOVE20GroupEvents, ILOVE20GroupErrors {
