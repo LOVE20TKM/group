@@ -20,7 +20,7 @@ verify_contract(){
   local contract_name=$2
   local contract_path=$3
   shift 3
-  local constructor_args="$@"
+  local ctor_args="$@"
 
   echo "Verifying contract: $contract_name at $contract_address"
 
@@ -28,7 +28,7 @@ verify_contract(){
     --chain-id $CHAIN_ID \
     --verifier $VERIFIER \
     --verifier-url $VERIFIER_URL \
-    --constructor-args $constructor_args \
+    --constructor-args "$ctor_args" \
     $contract_address \
     $contract_path:$contract_name
 

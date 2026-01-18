@@ -14,6 +14,11 @@ echo -e "Selected network: \033[36m$network\033[0m"
 # ------ dont change below ------
 network_dir="../network/$network"
 
+if [ ! -f "$network_dir/.account" ]; then
+    echo -e "\033[31mError:\033[0m .account file not found"
+    echo -e "Please create $network_dir/.account with KEYSTORE_ACCOUNT and ACCOUNT_ADDRESS"
+    return 1
+fi
 source $network_dir/.account && \
 source $network_dir/network.params
 
@@ -105,9 +110,3 @@ forge_script() {
     $([[ "$network" != "anvil" ]] && [[ "$network" != thinkium* ]] && echo "--verify --etherscan-api-key $ETHERSCAN_API_KEY")
 }
 echo "forge_script() loaded"
-
-forge_script_deploy_group() {
-  forge_script ../DeployLOVE20Group.s.sol:DeployLOVE20Group --sig "run()"
-}
-
-echo "forge_script_deploy_group() loaded"

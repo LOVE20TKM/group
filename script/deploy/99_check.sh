@@ -114,7 +114,7 @@ echo ""
 # Summary
 echo "========================================="
 if [ $failed_checks -eq 0 ]; then
-    echo -e "\033[32m✓ All checks passed (10/10)\033[0m"
+    echo -e "\033[32m✓ All parameter checks passed (5/5)\033[0m"
     echo "========================================="
     return 0
 else
