@@ -1643,6 +1643,289 @@ contract LOVE20GroupTest is Test {
         group.mint(groupName);
         vm.stopPrank();
     }
+
+    // ============ Holders Tracking Tests ============
+
+    event AddHolder(address indexed holder);
+    event RemoveHolder(address indexed holder);
+
+    function testHoldersCountAfterMint() public {
+        assertEq(group.holdersCount(), 0);
+
+        string memory groupName1 = "HolderTest1";
+        uint256 mintCost1 = group.calculateMintCost(groupName1);
+
+        vm.startPrank(user1);
+        love20Token.approve(address(group), mintCost1);
+        group.mint(groupName1);
+        vm.stopPrank();
+
+        assertEq(group.holdersCount(), 1);
+
+        string memory groupName2 = "HolderTest2";
+        uint256 mintCost2 = group.calculateMintCost(groupName2);
+
+        vm.startPrank(user2);
+        love20Token.approve(address(group), mintCost2);
+        group.mint(groupName2);
+        vm.stopPrank();
+
+        assertEq(group.holdersCount(), 2);
+    }
+
+    function testHoldersAtIndex() public {
+        string memory groupName1 = "HolderIdx1";
+        string memory groupName2 = "HolderIdx2";
+
+        uint256 mintCost1 = group.calculateMintCost(groupName1);
+
+        vm.startPrank(user1);
+        love20Token.approve(address(group), mintCost1);
+        group.mint(groupName1);
+        vm.stopPrank();
+
+        uint256 mintCost2 = group.calculateMintCost(groupName2);
+
+        vm.startPrank(user2);
+        love20Token.approve(address(group), mintCost2);
+        group.mint(groupName2);
+        vm.stopPrank();
+
+        assertEq(group.holdersAtIndex(0), user1);
+        assertEq(group.holdersAtIndex(1), user2);
+    }
+
+    function testHolderIndexOutOfBounds() public {
+        vm.expectRevert(ILOVE20GroupErrors.HolderIndexOutOfBounds.selector);
+        group.holdersAtIndex(0);
+
+        string memory groupName = "HolderBounds";
+        uint256 mintCost = group.calculateMintCost(groupName);
+
+        vm.startPrank(user1);
+        love20Token.approve(address(group), mintCost);
+        group.mint(groupName);
+        vm.stopPrank();
+
+        assertEq(group.holdersCount(), 1);
+        assertEq(group.holdersAtIndex(0), user1);
+
+        vm.expectRevert(ILOVE20GroupErrors.HolderIndexOutOfBounds.selector);
+        group.holdersAtIndex(1);
+    }
+
+    function testAddHolderEvent() public {
+        string memory groupName = "AddHolderEvt";
+        uint256 mintCost = group.calculateMintCost(groupName);
+
+        vm.startPrank(user1);
+        love20Token.approve(address(group), mintCost);
+
+        vm.expectEmit(true, false, false, false, address(group));
+        emit AddHolder(user1);
+
+        group.mint(groupName);
+        vm.stopPrank();
+    }
+
+    function testRemoveHolderEvent() public {
+        string memory groupName = "RemoveHolderEvt";
+        uint256 mintCost = group.calculateMintCost(groupName);
+
+        vm.startPrank(user1);
+        love20Token.approve(address(group), mintCost);
+        (uint256 tokenId, ) = group.mint(groupName);
+        vm.stopPrank();
+
+        assertEq(group.holdersCount(), 1);
+        assertEq(group.balanceOf(user1), 1);
+
+        vm.prank(user1);
+        vm.expectEmit(true, false, false, false, address(group));
+        emit RemoveHolder(user1);
+
+        group.transferFrom(user1, user2, tokenId);
+
+        assertEq(group.holdersCount(), 1);
+        assertEq(group.holdersAtIndex(0), user2);
+    }
+
+    function testHoldersAfterTransfer() public {
+        string memory groupName = "TransferHolder";
+        uint256 mintCost = group.calculateMintCost(groupName);
+
+        vm.startPrank(user1);
+        love20Token.approve(address(group), mintCost);
+        (uint256 tokenId, ) = group.mint(groupName);
+        vm.stopPrank();
+
+        assertEq(group.holdersCount(), 1);
+        assertEq(group.holdersAtIndex(0), user1);
+
+        vm.prank(user1);
+        group.transferFrom(user1, user2, tokenId);
+
+        assertEq(group.holdersCount(), 1);
+        assertEq(group.holdersAtIndex(0), user2);
+    }
+
+    function testSameUserMultipleMints() public {
+        string memory groupName1 = "SameUser1";
+        string memory groupName2 = "SameUser2";
+
+        uint256 mintCost1 = group.calculateMintCost(groupName1);
+
+        vm.startPrank(user1);
+        love20Token.approve(address(group), mintCost1);
+        group.mint(groupName1);
+        vm.stopPrank();
+
+        assertEq(group.holdersCount(), 1);
+
+        uint256 mintCost2 = group.calculateMintCost(groupName2);
+
+        vm.startPrank(user1);
+        love20Token.approve(address(group), mintCost2);
+        group.mint(groupName2);
+        vm.stopPrank();
+
+        // Same user mints twice, still only 1 holder
+        assertEq(group.holdersCount(), 1);
+        assertEq(group.holdersAtIndex(0), user1);
+        assertEq(group.balanceOf(user1), 2);
+    }
+
+    function testHoldersSwapAndPop() public {
+        address user3 = makeAddr("user3");
+        love20Token.mint(user3, 1_000_000 * 1e18);
+
+        string memory groupName1 = "SwapPop1";
+        string memory groupName2 = "SwapPop2";
+        string memory groupName3 = "SwapPop3";
+
+        uint256 mintCost1 = group.calculateMintCost(groupName1);
+        vm.startPrank(user1);
+        love20Token.approve(address(group), mintCost1);
+        (uint256 tokenId1, ) = group.mint(groupName1);
+        vm.stopPrank();
+
+        uint256 mintCost2 = group.calculateMintCost(groupName2);
+        vm.startPrank(user2);
+        love20Token.approve(address(group), mintCost2);
+        group.mint(groupName2);
+        vm.stopPrank();
+
+        uint256 mintCost3 = group.calculateMintCost(groupName3);
+        vm.startPrank(user3);
+        love20Token.approve(address(group), mintCost3);
+        group.mint(groupName3);
+        vm.stopPrank();
+
+        // Holders: [user1, user2, user3]
+        assertEq(group.holdersCount(), 3);
+        assertEq(group.holdersAtIndex(0), user1);
+        assertEq(group.holdersAtIndex(1), user2);
+        assertEq(group.holdersAtIndex(2), user3);
+
+        // user1 transfers to user2 (user1 removed via swap-and-pop, user3 moves to index 0)
+        vm.prank(user1);
+        group.transferFrom(user1, user2, tokenId1);
+
+        // Holders should be: [user3, user2]
+        assertEq(group.holdersCount(), 2);
+        assertEq(group.holdersAtIndex(0), user3);
+        assertEq(group.holdersAtIndex(1), user2);
+    }
+
+    // ============ ERC721 Boundary Tests ============
+
+    function testSafeTransferFrom() public {
+        ERC721ReceiverMock receiver = new ERC721ReceiverMock();
+
+        string memory groupName = "SafeTransfer";
+        uint256 mintCost = group.calculateMintCost(groupName);
+
+        vm.startPrank(user1);
+        love20Token.approve(address(group), mintCost);
+        (uint256 tokenId, ) = group.mint(groupName);
+        vm.stopPrank();
+
+        vm.prank(user1);
+        group.safeTransferFrom(user1, address(receiver), tokenId);
+
+        assertEq(group.ownerOf(tokenId), address(receiver));
+    }
+
+    function testSafeTransferFromWithData() public {
+        ERC721ReceiverMock receiver = new ERC721ReceiverMock();
+
+        string memory groupName = "SafeTransferData";
+        uint256 mintCost = group.calculateMintCost(groupName);
+
+        vm.startPrank(user1);
+        love20Token.approve(address(group), mintCost);
+        (uint256 tokenId, ) = group.mint(groupName);
+        vm.stopPrank();
+
+        bytes memory data = "test data";
+        vm.prank(user1);
+        group.safeTransferFrom(user1, address(receiver), tokenId, data);
+
+        assertEq(group.ownerOf(tokenId), address(receiver));
+    }
+
+    function testTokenByIndexOutOfBounds() public {
+        vm.expectRevert();
+        group.tokenByIndex(0);
+
+        string memory groupName = "TokenByIdx";
+        uint256 mintCost = group.calculateMintCost(groupName);
+
+        vm.startPrank(user1);
+        love20Token.approve(address(group), mintCost);
+        group.mint(groupName);
+        vm.stopPrank();
+
+        assertEq(group.tokenByIndex(0), 1);
+
+        vm.expectRevert();
+        group.tokenByIndex(1);
+    }
+
+    function testTokenOfOwnerByIndexOutOfBounds() public {
+        vm.expectRevert();
+        group.tokenOfOwnerByIndex(user1, 0);
+
+        string memory groupName = "TokenOfOwner";
+        uint256 mintCost = group.calculateMintCost(groupName);
+
+        vm.startPrank(user1);
+        love20Token.approve(address(group), mintCost);
+        group.mint(groupName);
+        vm.stopPrank();
+
+        assertEq(group.tokenOfOwnerByIndex(user1, 0), 1);
+
+        vm.expectRevert();
+        group.tokenOfOwnerByIndex(user1, 1);
+    }
+
+    function testOwnerOfNonExistentToken() public {
+        vm.expectRevert();
+        group.ownerOf(999);
+
+        vm.expectRevert();
+        group.ownerOf(0);
+    }
+
+    // ============ Immutable Getters Tests ============
+
+    function testImmutableGetters() public view {
+        assertEq(group.BASE_DIVISOR(), BASE_DIVISOR);
+        assertEq(group.BYTES_THRESHOLD(), BYTES_THRESHOLD);
+        assertEq(group.MULTIPLIER(), MULTIPLIER);
+        assertEq(group.MAX_GROUP_NAME_LENGTH(), MAX_GROUP_NAME_LENGTH);
+    }
 }
 
 // Mock contract that implements IERC721Receiver
