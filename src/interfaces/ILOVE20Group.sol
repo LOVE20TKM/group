@@ -9,6 +9,10 @@ interface ILOVE20GroupEvents {
         string normalizedName,
         uint256 cost
     );
+
+    event AddHolder(address indexed holder);
+
+    event RemoveHolder(address indexed holder);
 }
 
 interface ILOVE20GroupErrors {

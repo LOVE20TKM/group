@@ -87,7 +87,17 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
             bytes(ILOVE20Token(LOVE20_TOKEN_ADDRESS).symbol())
         );
         if (prefix == bytes4("Test")) {
-            groupName = string(abi.encodePacked("Test", groupName));
+            // Only add "Test" prefix if groupName doesn't already start with "Test"
+            bytes memory nameBytes = bytes(groupName);
+            if (
+                nameBytes.length < 4 ||
+                nameBytes[0] != "T" ||
+                nameBytes[1] != "e" ||
+                nameBytes[2] != "s" ||
+                nameBytes[3] != "t"
+            ) {
+                groupName = string(abi.encodePacked("Test", groupName));
+            }
         }
 
         mintCost = calculateMintCost(groupName);
@@ -100,8 +110,7 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
         string memory groupName,
         uint256 mintCost
     ) internal returns (uint256 tokenId) {
-        if (bytes(groupName).length == 0) revert GroupNameEmpty();
-        if (!_isValidGroupName(groupName)) revert InvalidGroupName();
+        _validateGroupName(groupName);
 
         // Use normalized (lowercase) name for uniqueness check
         string memory normalizedName = _toLowerCase(groupName);
@@ -239,6 +248,8 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
             _allHolders.push(holder);
             _holderIndex[holder] = index; // 0-based index
             _isHolder[holder] = true;
+
+            emit AddHolder({holder: holder});
         }
     }
 
@@ -259,6 +270,9 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
         }
         _allHolders.pop();
         _isHolder[holder] = false;
+        delete _holderIndex[holder];
+
+        emit RemoveHolder({holder: holder});
     }
 
     /**
@@ -301,12 +315,24 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
     }
 
     /**
-     * @dev Validate group name characters and format
+     * @dev Validate group name and revert with specific error
      * @param groupName The group name to validate
-     * @return bool True if the group name is valid
+     */
+    function _validateGroupName(string memory groupName) internal view {
+        bytes memory nameBytes = bytes(groupName);
+        uint256 len = nameBytes.length;
+
+        if (len == 0) revert GroupNameEmpty();
+        if (len > MAX_GROUP_NAME_LENGTH) revert InvalidGroupName();
+        if (!_isValidGroupNameChars(nameBytes)) revert InvalidGroupName();
+    }
+
+    /**
+     * @dev Validate group name characters and format
+     * @param nameBytes The group name bytes to validate
+     * @return bool True if the group name characters are valid
      *
      * Validation rules:
-     * - Length must be between 1 and 64 bytes (UTF-8 encoded)
      * - Must be valid UTF-8 encoding
      * - No ASCII whitespace (0x20) or control characters (0x00-0x1F, 0x7F)
      * - No Unicode whitespace characters (U+00A0, U+1680, U+2000-U+200A, U+202F, U+205F, U+3000)
@@ -318,16 +344,10 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
      * Note: We check byte length, not character count. A single Unicode
      * character may use multiple bytes in UTF-8 encoding.
      */
-    function _isValidGroupName(
-        string memory groupName
-    ) internal view returns (bool) {
-        bytes memory nameBytes = bytes(groupName);
+    function _isValidGroupNameChars(
+        bytes memory nameBytes
+    ) internal pure returns (bool) {
         uint256 len = nameBytes.length;
-
-        // Check length bounds (byte length, not character count)
-        if (len == 0 || len > MAX_GROUP_NAME_LENGTH) {
-            return false;
-        }
 
         // Validate UTF-8 encoding and check for invalid characters
         uint256 i = 0;
@@ -533,6 +553,9 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
      * @dev Convert ASCII uppercase letters (A-Z) to lowercase (a-z)
      * @param str The string to convert
      * @return A new string with uppercase letters converted to lowercase
+     * @notice Only converts ASCII letters (0x41-0x5A). Unicode characters
+     *         (e.g., German ß, Turkish İ, etc.) are NOT converted due to
+     *         complexity of Unicode case mapping rules.
      */
     function _toLowerCase(
         string memory str

@@ -763,7 +763,7 @@ contract LOVE20GroupTest is Test {
             owner: user1,
             groupName: groupName,
             normalizedName: normalizedName,
-            mintCost: mintCost
+            cost: mintCost
         });
 
         group.mint(groupName);
@@ -776,7 +776,7 @@ contract LOVE20GroupTest is Test {
         address indexed owner,
         string groupName,
         string normalizedName,
-        uint256 mintCost
+        uint256 cost
     );
 
     function testMintBurnsTokens() public {
