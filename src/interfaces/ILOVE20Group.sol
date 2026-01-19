@@ -56,7 +56,7 @@ interface ILOVE20Group is ILOVE20GroupEvents, ILOVE20GroupErrors {
         string calldata groupName
     ) external pure returns (string memory);
 
-    function totalMintCost() external view returns (uint256);
+    function totalBurnedForMint() external view returns (uint256);
 
     function holdersCount() external view returns (uint256);
 
