@@ -106,7 +106,7 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
     }
 
     function _mintGroup(
-        address to,
+        address groupOwner,
         string memory groupName,
         uint256 mintCost
     ) internal returns (uint256 tokenId) {
@@ -127,15 +127,15 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
             totalBurnedForMint += mintCost;
 
             IERC20 token = IERC20(LOVE20_TOKEN_ADDRESS);
-            token.safeTransferFrom(msg.sender, address(this), mintCost);
+            token.safeTransferFrom(groupOwner, address(this), mintCost);
             ILOVE20Token(LOVE20_TOKEN_ADDRESS).burn(mintCost);
         }
 
-        _safeMint(to, tokenId);
+        _safeMint(groupOwner, tokenId);
 
         emit Mint({
             tokenId: tokenId,
-            owner: msg.sender,
+            owner: groupOwner,
             groupName: groupName,
             normalizedName: normalizedName,
             cost: mintCost
