@@ -17,8 +17,8 @@ contract UnicodeWhitespaceTest is Test {
     address public user1;
 
     uint256 constant MAX_SUPPLY = 21_000_000_000 * 1e18; // 21 billion tokens
-    uint256 constant BASE_DIVISOR = 1e8;
-    uint256 constant BYTES_THRESHOLD = 8;
+    uint256 constant BASE_DIVISOR = 1e7;
+    uint256 constant BYTES_THRESHOLD = 7;
     uint256 constant MULTIPLIER = 10;
     uint256 constant MAX_GROUP_NAME_LENGTH = 64;
 

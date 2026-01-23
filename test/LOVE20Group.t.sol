@@ -26,8 +26,8 @@ contract LOVE20GroupTest is Test {
     uint256 constant MAX_SUPPLY = 21_000_000_000 * 1e18; // 21 billion tokens
 
     // Group parameters (matching default config)
-    uint256 constant BASE_DIVISOR = 1e8;
-    uint256 constant BYTES_THRESHOLD = 8;
+    uint256 constant BASE_DIVISOR = 1e7;
+    uint256 constant BYTES_THRESHOLD = 7;
     uint256 constant MULTIPLIER = 10;
     uint256 constant MAX_GROUP_NAME_LENGTH = 64;
 
@@ -68,7 +68,7 @@ contract LOVE20GroupTest is Test {
         // Group name with 10 bytes
         string memory groupName = "1234567890"; // 10 bytes
         uint256 unmintedSupply = MAX_SUPPLY - love20Token.totalSupply();
-        uint256 expectedCost = unmintedSupply / 1e8;
+        uint256 expectedCost = unmintedSupply / 1e7;
 
         uint256 actualCost = group.calculateMintCost(groupName);
         assertEq(actualCost, expectedCost);
@@ -78,17 +78,17 @@ contract LOVE20GroupTest is Test {
         // Group name with 12 bytes
         string memory groupName = "123456789012"; // 12 bytes
         uint256 unmintedSupply = MAX_SUPPLY - love20Token.totalSupply();
-        uint256 expectedCost = unmintedSupply / 1e8;
+        uint256 expectedCost = unmintedSupply / 1e7;
 
         uint256 actualCost = group.calculateMintCost(groupName);
         assertEq(actualCost, expectedCost);
     }
 
     function testCalculateMintCost8Bytes() public view {
-        // Group name with 8 bytes
+        // Group name with 8 bytes (>= 7 bytes, so base cost)
         string memory groupName = "12345678"; // 8 bytes
         uint256 unmintedSupply = MAX_SUPPLY - love20Token.totalSupply();
-        uint256 expectedCost = unmintedSupply / 1e8;
+        uint256 expectedCost = unmintedSupply / 1e7;
 
         uint256 actualCost = group.calculateMintCost(groupName);
         assertEq(actualCost, expectedCost);
@@ -98,7 +98,7 @@ contract LOVE20GroupTest is Test {
         // Group name with 6 bytes
         string memory groupName = "123456"; // 6 bytes
         uint256 unmintedSupply = MAX_SUPPLY - love20Token.totalSupply();
-        uint256 expectedCost = (unmintedSupply / 1e8) * 100; // 10^(8-6) = 100
+        uint256 expectedCost = (unmintedSupply / 1e7) * 10; // 10^(7-6) = 10
 
         uint256 actualCost = group.calculateMintCost(groupName);
         assertEq(actualCost, expectedCost);
@@ -108,7 +108,7 @@ contract LOVE20GroupTest is Test {
         // Group name with 4 bytes
         string memory groupName = "1234"; // 4 bytes
         uint256 unmintedSupply = MAX_SUPPLY - love20Token.totalSupply();
-        uint256 expectedCost = (unmintedSupply / 1e8) * 10000; // 10^(8-4) = 10000
+        uint256 expectedCost = (unmintedSupply / 1e7) * 1000; // 10^(7-4) = 1000
 
         uint256 actualCost = group.calculateMintCost(groupName);
         assertEq(actualCost, expectedCost);
@@ -118,7 +118,7 @@ contract LOVE20GroupTest is Test {
         // Group name with 1 byte (extreme case)
         string memory groupName = "a"; // 1 byte
         uint256 unmintedSupply = MAX_SUPPLY - love20Token.totalSupply();
-        uint256 expectedCost = (unmintedSupply / 1e8) * 1e7; // 10^(8-1) = 1e7
+        uint256 expectedCost = (unmintedSupply / 1e7) * 1e6; // 10^(7-1) = 1e6
 
         uint256 actualCost = group.calculateMintCost(groupName);
         assertEq(actualCost, expectedCost);
@@ -1601,7 +1601,7 @@ contract LOVE20GroupTest is Test {
         uint256 mintCost = group.calculateMintCost(groupName);
 
         uint256 unmintedSupply = MAX_SUPPLY - love20Token.totalSupply();
-        uint256 expectedCost = (unmintedSupply / 1e8) * 1e7; // 10^(8-1) = 1e7
+        uint256 expectedCost = (unmintedSupply / 1e7) * 1e6; // 10^(7-1) = 1e6
 
         // Verify the cost is calculated correctly
         assertEq(mintCost, expectedCost);
@@ -1688,13 +1688,13 @@ contract LOVE20GroupTest is Test {
 
         uint256 cost = group.calculateMintCost(groupName);
         uint256 unmintedSupply = MAX_SUPPLY - love20Token.totalSupply();
-        uint256 baseCost = unmintedSupply / 1e8;
+        uint256 baseCost = unmintedSupply / 1e7;
 
-        if (nameLength >= 8) {
+        if (nameLength >= 7) {
             assertEq(cost, baseCost);
         } else {
             uint256 multiplier = 1;
-            for (uint256 i = 0; i < 8 - nameLength; i++) {
+            for (uint256 i = 0; i < 7 - nameLength; i++) {
                 multiplier *= 10;
             }
             assertEq(cost, baseCost * multiplier);

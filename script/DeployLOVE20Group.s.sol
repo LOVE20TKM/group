@@ -14,8 +14,8 @@ contract DeployLOVE20Group is Script {
         address love20TokenAddress = vm.envAddress("LOVE20_TOKEN_ADDRESS");
 
         // Load Group parameters from environment (with defaults)
-        uint256 baseDivisor = vm.envOr("BASE_DIVISOR", uint256(100000000));
-        uint256 bytesThreshold = vm.envOr("BYTES_THRESHOLD", uint256(8));
+        uint256 baseDivisor = vm.envOr("BASE_DIVISOR", uint256(10000000));
+        uint256 bytesThreshold = vm.envOr("BYTES_THRESHOLD", uint256(7));
         uint256 multiplier = vm.envOr("MULTIPLIER", uint256(10));
         uint256 maxGroupNameLength = vm.envOr("MAX_GROUP_NAME_LENGTH", uint256(64));
 

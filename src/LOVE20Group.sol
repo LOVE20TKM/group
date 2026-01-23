@@ -147,9 +147,9 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
     /**
      * @notice Calculate the cost to mint a group with the given group name
      * @dev Cost formula:
-     *      Base cost = remaining unminted LOVE20 / 10^8
-     *      For names with >= 8 bytes: cost = base cost
-     *      For names with < 8 bytes: cost = base cost * (10 ^ (8 - byte_length))
+     *      Base cost = remaining unminted LOVE20 / 10^7
+     *      For names with >= 7 bytes: cost = base cost
+     *      For names with < 7 bytes: cost = base cost * (10 ^ (7 - byte_length))
      * @param groupName The group name to calculate cost for
      * @return The cost in LOVE20 tokens
      */
