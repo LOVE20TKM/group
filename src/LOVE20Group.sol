@@ -82,6 +82,8 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
     ) external returns (uint256 tokenId, uint256 mintCost) {
         groupName = _addTestPrefixIfNeeded(groupName);
 
+        _validateGroupName(groupName);
+
         mintCost = calculateMintCost(groupName);
         tokenId = _mintGroup(msg.sender, groupName, mintCost);
         return (tokenId, mintCost);
@@ -92,14 +94,8 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
         string memory groupName,
         uint256 mintCost
     ) internal returns (uint256 tokenId) {
-        _validateGroupName(groupName);
-
-        // Use normalized (lowercase) name for uniqueness check
+        // Use normalized (lowercase) name for storage
         string memory normalizedName = _toLowerCase(groupName);
-        uint256 existingTokenId = _normalizedNameToTokenId[normalizedName];
-        if (existingTokenId != 0) {
-            revert GroupNameAlreadyExists(existingTokenId);
-        }
 
         tokenId = _nextTokenId++;
         _groupNames[tokenId] = groupName;
@@ -331,6 +327,13 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
             revert GroupNameTooLong(len, MAX_GROUP_NAME_LENGTH);
         if (!_isValidGroupNameChars(nameBytes))
             revert GroupNameInvalidCharacters();
+
+        // Check uniqueness (case-insensitive)
+        string memory normalizedName = _toLowerCase(groupName);
+        uint256 existingTokenId = _normalizedNameToTokenId[normalizedName];
+        if (existingTokenId != 0) {
+            revert GroupNameAlreadyExists(existingTokenId);
+        }
     }
 
     /**
