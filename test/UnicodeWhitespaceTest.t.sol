@@ -36,13 +36,8 @@ contract UnicodeWhitespaceTest is Test {
     }
 
     // Helper function to expect GroupNameInvalidCharacters error
-    function _expectInvalidChars(string memory groupName) internal {
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                ILOVE20GroupErrors.GroupNameInvalidCharacters.selector,
-                groupName
-            )
-        );
+    function _expectInvalidChars(string memory) internal {
+        vm.expectRevert(ILOVE20GroupErrors.GroupNameInvalidCharacters.selector);
     }
 
     // ============ Unicode Whitespace Tests ============

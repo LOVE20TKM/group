@@ -16,11 +16,11 @@ interface ILOVE20GroupEvents {
 }
 
 interface ILOVE20GroupErrors {
-    error GroupNameAlreadyExists(string groupName, uint256 existingTokenId);
+    error GroupNameAlreadyExists(uint256 existingTokenId);
     error GroupNameEmpty();
     error GroupNameTooLong(uint256 length, uint256 maxLength);
-    error GroupNameInvalidCharacters(string groupName);
-    error HolderIndexOutOfBounds(uint256 index, uint256 length);
+    error GroupNameInvalidCharacters();
+    error HolderIndexOutOfBounds(uint256 length);
 }
 
 interface ILOVE20Group is ILOVE20GroupEvents, ILOVE20GroupErrors {

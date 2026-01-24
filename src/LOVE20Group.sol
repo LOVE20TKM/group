@@ -116,7 +116,7 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
         string memory normalizedName = _toLowerCase(groupName);
         uint256 existingTokenId = _normalizedNameToTokenId[normalizedName];
         if (existingTokenId != 0) {
-            revert GroupNameAlreadyExists(groupName, existingTokenId);
+            revert GroupNameAlreadyExists(existingTokenId);
         }
 
         tokenId = _nextTokenId++;
@@ -232,7 +232,7 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
      */
     function holdersAtIndex(uint256 index) external view returns (address) {
         if (index >= _allHolders.length) {
-            revert HolderIndexOutOfBounds(index, _allHolders.length);
+            revert HolderIndexOutOfBounds(_allHolders.length);
         }
         return _allHolders[index];
     }
@@ -327,7 +327,7 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
         if (len > MAX_GROUP_NAME_LENGTH)
             revert GroupNameTooLong(len, MAX_GROUP_NAME_LENGTH);
         if (!_isValidGroupNameChars(nameBytes))
-            revert GroupNameInvalidCharacters(groupName);
+            revert GroupNameInvalidCharacters();
     }
 
     /**

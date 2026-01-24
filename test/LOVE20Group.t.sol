@@ -434,12 +434,7 @@ contract LOVE20GroupTest is Test {
         string memory groupName = " LeadingSpace";
 
         vm.startPrank(user1);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                ILOVE20GroupErrors.GroupNameInvalidCharacters.selector,
-                groupName
-            )
-        );
+        vm.expectRevert(ILOVE20GroupErrors.GroupNameInvalidCharacters.selector);
         group.mint(groupName);
         vm.stopPrank();
     }
@@ -448,12 +443,7 @@ contract LOVE20GroupTest is Test {
         string memory groupName = "TrailingSpace ";
 
         vm.startPrank(user1);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                ILOVE20GroupErrors.GroupNameInvalidCharacters.selector,
-                groupName
-            )
-        );
+        vm.expectRevert(ILOVE20GroupErrors.GroupNameInvalidCharacters.selector);
         group.mint(groupName);
         vm.stopPrank();
     }
@@ -463,12 +453,7 @@ contract LOVE20GroupTest is Test {
         string memory groupNameWithNewline = "Group\nName";
 
         vm.startPrank(user1);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                ILOVE20GroupErrors.GroupNameInvalidCharacters.selector,
-                groupNameWithNewline
-            )
-        );
+        vm.expectRevert(ILOVE20GroupErrors.GroupNameInvalidCharacters.selector);
         group.mint(groupNameWithNewline);
         vm.stopPrank();
     }
@@ -478,12 +463,7 @@ contract LOVE20GroupTest is Test {
         string memory groupNameWithTab = "Group\tName";
 
         vm.startPrank(user1);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                ILOVE20GroupErrors.GroupNameInvalidCharacters.selector,
-                groupNameWithTab
-            )
-        );
+        vm.expectRevert(ILOVE20GroupErrors.GroupNameInvalidCharacters.selector);
         group.mint(groupNameWithTab);
         vm.stopPrank();
     }
@@ -510,12 +490,7 @@ contract LOVE20GroupTest is Test {
         string memory groupName = unicode"Group\u200BName";
 
         vm.startPrank(user1);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                ILOVE20GroupErrors.GroupNameInvalidCharacters.selector,
-                groupName
-            )
-        );
+        vm.expectRevert(ILOVE20GroupErrors.GroupNameInvalidCharacters.selector);
         group.mint(groupName);
         vm.stopPrank();
     }
@@ -525,12 +500,7 @@ contract LOVE20GroupTest is Test {
         string memory groupName = unicode"Group\u200CName";
 
         vm.startPrank(user1);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                ILOVE20GroupErrors.GroupNameInvalidCharacters.selector,
-                groupName
-            )
-        );
+        vm.expectRevert(ILOVE20GroupErrors.GroupNameInvalidCharacters.selector);
         group.mint(groupName);
         vm.stopPrank();
     }
@@ -540,12 +510,7 @@ contract LOVE20GroupTest is Test {
         string memory groupName = unicode"Group\u200DName";
 
         vm.startPrank(user1);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                ILOVE20GroupErrors.GroupNameInvalidCharacters.selector,
-                groupName
-            )
-        );
+        vm.expectRevert(ILOVE20GroupErrors.GroupNameInvalidCharacters.selector);
         group.mint(groupName);
         vm.stopPrank();
     }
@@ -555,12 +520,7 @@ contract LOVE20GroupTest is Test {
         string memory groupName = unicode"Group\u200EName";
 
         vm.startPrank(user1);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                ILOVE20GroupErrors.GroupNameInvalidCharacters.selector,
-                groupName
-            )
-        );
+        vm.expectRevert(ILOVE20GroupErrors.GroupNameInvalidCharacters.selector);
         group.mint(groupName);
         vm.stopPrank();
     }
@@ -570,12 +530,7 @@ contract LOVE20GroupTest is Test {
         string memory groupName = unicode"Group\u200FName";
 
         vm.startPrank(user1);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                ILOVE20GroupErrors.GroupNameInvalidCharacters.selector,
-                groupName
-            )
-        );
+        vm.expectRevert(ILOVE20GroupErrors.GroupNameInvalidCharacters.selector);
         group.mint(groupName);
         vm.stopPrank();
     }
@@ -585,12 +540,7 @@ contract LOVE20GroupTest is Test {
         string memory groupName = unicode"Group\u00ADName";
 
         vm.startPrank(user1);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                ILOVE20GroupErrors.GroupNameInvalidCharacters.selector,
-                groupName
-            )
-        );
+        vm.expectRevert(ILOVE20GroupErrors.GroupNameInvalidCharacters.selector);
         group.mint(groupName);
         vm.stopPrank();
     }
@@ -600,12 +550,7 @@ contract LOVE20GroupTest is Test {
         string memory groupName = unicode"\uFEFFGroupName";
 
         vm.startPrank(user1);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                ILOVE20GroupErrors.GroupNameInvalidCharacters.selector,
-                groupName
-            )
-        );
+        vm.expectRevert(ILOVE20GroupErrors.GroupNameInvalidCharacters.selector);
         group.mint(groupName);
         vm.stopPrank();
     }
@@ -615,12 +560,7 @@ contract LOVE20GroupTest is Test {
         string memory groupName = unicode"Group\u2060Name";
 
         vm.startPrank(user1);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                ILOVE20GroupErrors.GroupNameInvalidCharacters.selector,
-                groupName
-            )
-        );
+        vm.expectRevert(ILOVE20GroupErrors.GroupNameInvalidCharacters.selector);
         group.mint(groupName);
         vm.stopPrank();
     }
@@ -630,12 +570,7 @@ contract LOVE20GroupTest is Test {
         string memory groupName = unicode"Group\u034FName";
 
         vm.startPrank(user1);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                ILOVE20GroupErrors.GroupNameInvalidCharacters.selector,
-                groupName
-            )
-        );
+        vm.expectRevert(ILOVE20GroupErrors.GroupNameInvalidCharacters.selector);
         group.mint(groupName);
         vm.stopPrank();
     }
@@ -657,7 +592,6 @@ contract LOVE20GroupTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(
                 ILOVE20GroupErrors.GroupNameAlreadyExists.selector,
-                groupName,
                 tokenId
             )
         );
@@ -684,7 +618,6 @@ contract LOVE20GroupTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(
                 ILOVE20GroupErrors.GroupNameAlreadyExists.selector,
-                groupName2,
                 tokenId
             )
         );
@@ -697,7 +630,6 @@ contract LOVE20GroupTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(
                 ILOVE20GroupErrors.GroupNameAlreadyExists.selector,
-                groupName3,
                 tokenId
             )
         );
@@ -830,12 +762,7 @@ contract LOVE20GroupTest is Test {
         string memory groupName = "Group Name";
 
         vm.startPrank(user1);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                ILOVE20GroupErrors.GroupNameInvalidCharacters.selector,
-                groupName
-            )
-        );
+        vm.expectRevert(ILOVE20GroupErrors.GroupNameInvalidCharacters.selector);
         group.mint(groupName);
         vm.stopPrank();
     }
@@ -1793,7 +1720,6 @@ contract LOVE20GroupTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(
                 ILOVE20GroupErrors.HolderIndexOutOfBounds.selector,
-                0,
                 0
             )
         );
@@ -1813,7 +1739,6 @@ contract LOVE20GroupTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(
                 ILOVE20GroupErrors.HolderIndexOutOfBounds.selector,
-                1,
                 1
             )
         );
