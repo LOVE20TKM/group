@@ -80,22 +80,7 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
     function mint(
         string memory groupName
     ) external returns (uint256 tokenId, uint256 mintCost) {
-        bytes4 prefix = bytes4(
-            bytes(ILOVE20Token(LOVE20_TOKEN_ADDRESS).symbol())
-        );
-        if (prefix == bytes4("Test")) {
-            // Only add "Test" prefix if groupName doesn't already start with "Test"
-            bytes memory nameBytes = bytes(groupName);
-            if (
-                nameBytes.length < 4 ||
-                nameBytes[0] != "T" ||
-                nameBytes[1] != "e" ||
-                nameBytes[2] != "s" ||
-                nameBytes[3] != "t"
-            ) {
-                groupName = string(abi.encodePacked("Test", groupName));
-            }
-        }
+        groupName = _addTestPrefixIfNeeded(groupName);
 
         mintCost = calculateMintCost(groupName);
         tokenId = _mintGroup(msg.sender, groupName, mintCost);
@@ -235,6 +220,33 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
     }
 
     // ============ Internal Functions ============
+
+    /**
+     * @dev Add "Test" prefix to group name if token symbol starts with "Test"
+     *      and group name doesn't already start with "Test"
+     * @param groupName The original group name
+     * @return The group name with "Test" prefix added if needed
+     */
+    function _addTestPrefixIfNeeded(
+        string memory groupName
+    ) internal view returns (string memory) {
+        bytes4 prefix = bytes4(
+            bytes(ILOVE20Token(LOVE20_TOKEN_ADDRESS).symbol())
+        );
+        if (prefix == bytes4("Test")) {
+            bytes memory nameBytes = bytes(groupName);
+            if (
+                nameBytes.length < 4 ||
+                nameBytes[0] != "T" ||
+                nameBytes[1] != "e" ||
+                nameBytes[2] != "s" ||
+                nameBytes[3] != "t"
+            ) {
+                return string(abi.encodePacked("Test", groupName));
+            }
+        }
+        return groupName;
+    }
 
     /**
      * @dev Add a holder to the holders array if not already present
