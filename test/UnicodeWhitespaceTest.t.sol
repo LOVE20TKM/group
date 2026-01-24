@@ -307,4 +307,150 @@ contract UnicodeWhitespaceTest is Test {
         group.mint(groupName);
         vm.stopPrank();
     }
+
+    // ============ Bidirectional Isolate Controls Tests (U+2066-U+2069) ============
+
+    function testCannotMintWithLeftToRightIsolate() public {
+        // U+2066 - Left-to-Right Isolate (LRI)
+        string memory groupName = unicode"Group\u2066Name";
+
+        vm.startPrank(user1);
+        _expectInvalidChars(groupName);
+        group.mint(groupName);
+        vm.stopPrank();
+    }
+
+    function testCannotMintWithRightToLeftIsolate() public {
+        // U+2067 - Right-to-Left Isolate (RLI)
+        string memory groupName = unicode"Group\u2067Name";
+
+        vm.startPrank(user1);
+        _expectInvalidChars(groupName);
+        group.mint(groupName);
+        vm.stopPrank();
+    }
+
+    function testCannotMintWithFirstStrongIsolate() public {
+        // U+2068 - First Strong Isolate (FSI)
+        string memory groupName = unicode"Group\u2068Name";
+
+        vm.startPrank(user1);
+        _expectInvalidChars(groupName);
+        group.mint(groupName);
+        vm.stopPrank();
+    }
+
+    function testCannotMintWithPopDirectionalIsolate() public {
+        // U+2069 - Pop Directional Isolate (PDI)
+        string memory groupName = unicode"Group\u2069Name";
+
+        vm.startPrank(user1);
+        _expectInvalidChars(groupName);
+        group.mint(groupName);
+        vm.stopPrank();
+    }
+
+    // ============ Invisible Mathematical Operators Tests (U+2061-U+2064) ============
+
+    function testCannotMintWithFunctionApplication() public {
+        // U+2061 - Function Application
+        string memory groupName = unicode"Group\u2061Name";
+
+        vm.startPrank(user1);
+        _expectInvalidChars(groupName);
+        group.mint(groupName);
+        vm.stopPrank();
+    }
+
+    function testCannotMintWithInvisibleTimes() public {
+        // U+2062 - Invisible Times
+        string memory groupName = unicode"Group\u2062Name";
+
+        vm.startPrank(user1);
+        _expectInvalidChars(groupName);
+        group.mint(groupName);
+        vm.stopPrank();
+    }
+
+    function testCannotMintWithInvisibleSeparator() public {
+        // U+2063 - Invisible Separator
+        string memory groupName = unicode"Group\u2063Name";
+
+        vm.startPrank(user1);
+        _expectInvalidChars(groupName);
+        group.mint(groupName);
+        vm.stopPrank();
+    }
+
+    function testCannotMintWithInvisiblePlus() public {
+        // U+2064 - Invisible Plus
+        string memory groupName = unicode"Group\u2064Name";
+
+        vm.startPrank(user1);
+        _expectInvalidChars(groupName);
+        group.mint(groupName);
+        vm.stopPrank();
+    }
+
+    // ============ Deprecated Format Characters Tests (U+206A-U+206F) ============
+
+    function testCannotMintWithInhibitSymmetricSwapping() public {
+        // U+206A - Inhibit Symmetric Swapping
+        string memory groupName = unicode"Group\u206AName";
+
+        vm.startPrank(user1);
+        _expectInvalidChars(groupName);
+        group.mint(groupName);
+        vm.stopPrank();
+    }
+
+    function testCannotMintWithActivateSymmetricSwapping() public {
+        // U+206B - Activate Symmetric Swapping
+        string memory groupName = unicode"Group\u206BName";
+
+        vm.startPrank(user1);
+        _expectInvalidChars(groupName);
+        group.mint(groupName);
+        vm.stopPrank();
+    }
+
+    function testCannotMintWithInhibitArabicFormShaping() public {
+        // U+206C - Inhibit Arabic Form Shaping
+        string memory groupName = unicode"Group\u206CName";
+
+        vm.startPrank(user1);
+        _expectInvalidChars(groupName);
+        group.mint(groupName);
+        vm.stopPrank();
+    }
+
+    function testCannotMintWithActivateArabicFormShaping() public {
+        // U+206D - Activate Arabic Form Shaping
+        string memory groupName = unicode"Group\u206DName";
+
+        vm.startPrank(user1);
+        _expectInvalidChars(groupName);
+        group.mint(groupName);
+        vm.stopPrank();
+    }
+
+    function testCannotMintWithNationalDigitShapes() public {
+        // U+206E - National Digit Shapes
+        string memory groupName = unicode"Group\u206EName";
+
+        vm.startPrank(user1);
+        _expectInvalidChars(groupName);
+        group.mint(groupName);
+        vm.stopPrank();
+    }
+
+    function testCannotMintWithNominalDigitShapes() public {
+        // U+206F - Nominal Digit Shapes
+        string memory groupName = unicode"Group\u206FName";
+
+        vm.startPrank(user1);
+        _expectInvalidChars(groupName);
+        group.mint(groupName);
+        vm.stopPrank();
+    }
 }

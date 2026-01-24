@@ -341,7 +341,9 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
      * - No Unicode whitespace characters (U+00A0, U+1680, U+2000-U+200A, U+202F, U+205F, U+3000)
      * - No zero-width characters (U+200B-U+200F, U+034F, U+FEFF, U+2060, U+00AD)
      * - No line/paragraph separators (U+2028, U+2029)
-     * - No directional formatting (U+061C, U+202A-U+202E)
+     * - No directional formatting (U+061C, U+202A-U+202E, U+2066-U+2069)
+     * - No invisible mathematical operators (U+2061-U+2064)
+     * - No deprecated format characters (U+206A-U+206F)
      * - Supports UTF-8 encoded characters including Unicode
      *
      * Note: We check byte length, not character count. A single Unicode
@@ -407,38 +409,32 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
             }
 
             // Now check for forbidden Unicode characters
+            // Gas-optimized: Group checks by first byte to reduce redundant comparisons
             if (numBytes == 2) {
                 uint8 byte1 = uint8(nameBytes[i]);
                 uint8 byte2 = uint8(nameBytes[i + 1]);
 
-                // Check for U+00A0 (No-Break Space)
-                // UTF-8: 0xC2 0xA0
-                if (byte1 == 0xC2 && byte2 == 0xA0) {
-                    return false;
-                }
-
-                // Check for U+00AD (Soft Hyphen)
-                // UTF-8: 0xC2 0xAD
-                if (byte1 == 0xC2 && byte2 == 0xAD) {
-                    return false;
-                }
-
-                // Check for C1 control characters (0x80-0x9F)
-                // UTF-8: 0xC2 0x80-0x9F
-                if (byte1 == 0xC2 && byte2 >= 0x80 && byte2 <= 0x9F) {
-                    return false;
-                }
-
-                // Check for U+034F (Combining Grapheme Joiner)
-                // UTF-8: 0xCD 0x8F
-                if (byte1 == 0xCD && byte2 == 0x8F) {
-                    return false;
-                }
-
-                // Check for U+061C (Arabic Letter Mark)
-                // UTF-8: 0xD8 0x9C
-                if (byte1 == 0xD8 && byte2 == 0x9C) {
-                    return false;
+                if (byte1 == 0xC2) {
+                    // C1 control characters (U+0080-U+009F): 0x80-0x9F
+                    // U+00A0 (No-Break Space): 0xA0
+                    // U+00AD (Soft Hyphen): 0xAD
+                    if (
+                        (byte2 >= 0x80 && byte2 <= 0x9F) ||
+                        byte2 == 0xA0 ||
+                        byte2 == 0xAD
+                    ) {
+                        return false;
+                    }
+                } else if (byte1 == 0xCD) {
+                    // U+034F (Combining Grapheme Joiner): 0xCD 0x8F
+                    if (byte2 == 0x8F) {
+                        return false;
+                    }
+                } else if (byte1 == 0xD8) {
+                    // U+061C (Arabic Letter Mark): 0xD8 0x9C
+                    if (byte2 == 0x9C) {
+                        return false;
+                    }
                 }
             }
 
@@ -447,85 +443,57 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
                 uint8 byte2 = uint8(nameBytes[i + 1]);
                 uint8 byte3 = uint8(nameBytes[i + 2]);
 
-                // Check for U+1680 (Ogham Space Mark)
-                // UTF-8: 0xE1 0x9A 0x80
-                if (byte1 == 0xE1 && byte2 == 0x9A && byte3 == 0x80) {
-                    return false;
-                }
+                // Gas-optimized: Group checks by first byte to reduce redundant comparisons
 
-                // Check for U+2000 to U+200F (Various spaces, zero-width chars, LRM, RLM)
-                // UTF-8: 0xE2 0x80 0x80-0x8F
-                if (
-                    byte1 == 0xE2 &&
-                    byte2 == 0x80 &&
-                    byte3 >= 0x80 &&
-                    byte3 <= 0x8F
-                ) {
-                    return false;
-                }
-
-                // Check for U+2028 (Line Separator)
-                // UTF-8: 0xE2 0x80 0xA8
-                if (byte1 == 0xE2 && byte2 == 0x80 && byte3 == 0xA8) {
-                    return false;
-                }
-
-                // Check for U+2029 (Paragraph Separator)
-                // UTF-8: 0xE2 0x80 0xA9
-                if (byte1 == 0xE2 && byte2 == 0x80 && byte3 == 0xA9) {
-                    return false;
-                }
-
-                // Check for U+202A-U+202E (Directional formatting characters)
-                // UTF-8: 0xE2 0x80 0xAA-0xAE
-                if (
-                    byte1 == 0xE2 &&
-                    byte2 == 0x80 &&
-                    byte3 >= 0xAA &&
-                    byte3 <= 0xAE
-                ) {
-                    return false;
-                }
-
-                // Check for U+202F (Narrow No-Break Space)
-                // UTF-8: 0xE2 0x80 0xAF
-                if (byte1 == 0xE2 && byte2 == 0x80 && byte3 == 0xAF) {
-                    return false;
-                }
-
-                // Check for U+205F (Medium Mathematical Space)
-                // UTF-8: 0xE2 0x81 0x9F
-                if (byte1 == 0xE2 && byte2 == 0x81 && byte3 == 0x9F) {
-                    return false;
-                }
-
-                // Check for U+2060 (Word Joiner)
-                // UTF-8: 0xE2 0x81 0xA0
-                if (byte1 == 0xE2 && byte2 == 0x81 && byte3 == 0xA0) {
-                    return false;
-                }
-
-                // Check for U+3000 (Ideographic Space - CJK full-width space)
-                // UTF-8: 0xE3 0x80 0x80
-                if (byte1 == 0xE3 && byte2 == 0x80 && byte3 == 0x80) {
-                    return false;
-                }
-
-                // Check for U+FEFF (Zero Width No-Break Space / BOM)
-                // UTF-8: 0xEF 0xBB 0xBF
-                if (byte1 == 0xEF && byte2 == 0xBB && byte3 == 0xBF) {
-                    return false;
-                }
-
-                // Additional validation for 3-byte sequences
-                // Reject overlong encodings and invalid ranges
-                if (byte1 == 0xE0 && byte2 < 0xA0) {
-                    // Overlong encoding
-                    return false;
-                }
-                if (byte1 == 0xED && byte2 >= 0xA0) {
-                    // UTF-16 surrogates (U+D800 to U+DFFF are invalid in UTF-8)
-                    return false;
+                if (byte1 == 0xE1) {
+                    // Check for U+1680 (Ogham Space Mark): 0xE1 0x9A 0x80
+                    if (byte2 == 0x9A && byte3 == 0x80) {
+                        return false;
+                    }
+                } else if (byte1 == 0xE2) {
+                    // All U+2xxx forbidden characters start with 0xE2
+                    if (byte2 == 0x80) {
+                        // U+2000-U+200F (spaces, zero-width chars): 0x80-0x8F
+                        // U+2028-U+202F (separators, bidi, NNBSP): 0xA8-0xAF
+                        if (
+                            (byte3 >= 0x80 && byte3 <= 0x8F) ||
+                            (byte3 >= 0xA8 && byte3 <= 0xAF)
+                        ) {
+                            return false;
+                        }
+                    } else if (byte2 == 0x81) {
+                        // U+205F (Medium Math Space): 0x9F
+                        // U+2060-U+2064 (Word Joiner, Invisible Math Ops): 0xA0-0xA4
+                        // U+2066-U+2069 (Bidi Isolates): 0xA6-0xA9
+                        // U+206A-U+206F (Deprecated Format Chars): 0xAA-0xAF
+                        if (
+                            byte3 == 0x9F ||
+                            (byte3 >= 0xA0 && byte3 <= 0xA4) ||
+                            (byte3 >= 0xA6 && byte3 <= 0xAF)
+                        ) {
+                            return false;
+                        }
+                    }
+                } else if (byte1 == 0xE3) {
+                    // Check for U+3000 (Ideographic Space): 0xE3 0x80 0x80
+                    if (byte2 == 0x80 && byte3 == 0x80) {
+                        return false;
+                    }
+                } else if (byte1 == 0xEF) {
+                    // Check for U+FEFF (BOM): 0xEF 0xBB 0xBF
+                    if (byte2 == 0xBB && byte3 == 0xBF) {
+                        return false;
+                    }
+                } else if (byte1 == 0xE0) {
+                    // Reject overlong encodings
+                    if (byte2 < 0xA0) {
+                        return false;
+                    }
+                } else if (byte1 == 0xED) {
+                    // Reject UTF-16 surrogates (U+D800-U+DFFF)
+                    if (byte2 >= 0xA0) {
+                        return false;
+                    }
                 }
             }
 
