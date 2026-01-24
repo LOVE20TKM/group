@@ -42,10 +42,7 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
     // all holder addresses
     address[] internal _allHolders;
 
-    // holderAddress => whether the holder exists in the array
-    mapping(address => bool) internal _isHolder;
-
-    // holderAddress => index in _allHolders array (0-based, only valid when _isHolder is true)
+    // holderAddress => index in _allHolders array (0-based, only valid when balanceOf(holder) > 0)
     mapping(address => uint256) internal _holderIndex;
 
     // ============ Constructor ============
@@ -244,14 +241,11 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
      * @param holder The address to add
      */
     function _addHolder(address holder) internal {
-        if (!_isHolder[holder] && holder != address(0)) {
-            uint256 index = _allHolders.length;
-            _allHolders.push(holder);
-            _holderIndex[holder] = index; // 0-based index
-            _isHolder[holder] = true;
+        uint256 index = _allHolders.length;
+        _allHolders.push(holder);
+        _holderIndex[holder] = index; // 0-based index
 
-            emit AddHolder({holder: holder, totalHolders: _allHolders.length});
-        }
+        emit AddHolder({holder: holder, totalHolders: _allHolders.length});
     }
 
     /**
@@ -259,8 +253,6 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
      * @param holder The address to remove
      */
     function _removeHolder(address holder) internal {
-        if (!_isHolder[holder]) return; // Not in array
-
         uint256 index = _holderIndex[holder];
         uint256 lastIndex = _allHolders.length - 1;
 
@@ -270,7 +262,6 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
             _holderIndex[lastHolder] = index;
         }
         _allHolders.pop();
-        _isHolder[holder] = false;
         delete _holderIndex[holder];
 
         emit RemoveHolder({holder: holder, totalHolders: _allHolders.length});
