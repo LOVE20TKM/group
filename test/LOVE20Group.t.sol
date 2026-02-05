@@ -1957,6 +1957,359 @@ contract LOVE20GroupTest is Test {
         assertEq(group.MULTIPLIER(), MULTIPLIER);
         assertEq(group.MAX_GROUP_NAME_LENGTH(), MAX_GROUP_NAME_LENGTH);
     }
+
+    // ============ Test Prefix Edge Cases ============
+
+    function testMintWithTestSymbolGroupNameAlreadyHasTestPrefix() public {
+        MockLOVE20Token testToken = new MockLOVE20Token(
+            "TestToken",
+            "TestToken",
+            MAX_SUPPLY
+        );
+        LOVE20Group testGroup = new LOVE20Group(
+            address(testToken),
+            BASE_DIVISOR,
+            BYTES_THRESHOLD,
+            MULTIPLIER,
+            MAX_GROUP_NAME_LENGTH
+        );
+        testToken.mint(user1, 1_000_000 * 1e18);
+
+        // groupName already starts with "Test", should NOT double-add prefix
+        string memory groupName = "TestMyGroup";
+        uint256 mintCost = testGroup.calculateMintCost(groupName);
+
+        vm.startPrank(user1);
+        testToken.approve(address(testGroup), mintCost);
+        (uint256 tokenId, ) = testGroup.mint(groupName);
+        vm.stopPrank();
+
+        assertEq(testGroup.groupNameOf(tokenId), "TestMyGroup");
+        assertFalse(testGroup.isGroupNameUsed("TestTestMyGroup"));
+    }
+
+    function testMintWithTestSymbolShortGroupName() public {
+        MockLOVE20Token testToken = new MockLOVE20Token(
+            "TestToken",
+            "TestToken",
+            MAX_SUPPLY
+        );
+        LOVE20Group testGroup = new LOVE20Group(
+            address(testToken),
+            BASE_DIVISOR,
+            BYTES_THRESHOLD,
+            MULTIPLIER,
+            MAX_GROUP_NAME_LENGTH
+        );
+        testToken.mint(user1, 1_000_000 * 1e18);
+
+        // groupName < 4 bytes, should add "Test" prefix
+        string memory groupName = "AB";
+        string memory expectedGroupName = "TestAB";
+        uint256 mintCost = testGroup.calculateMintCost(expectedGroupName);
+
+        vm.startPrank(user1);
+        testToken.approve(address(testGroup), mintCost);
+        (uint256 tokenId, ) = testGroup.mint(groupName);
+        vm.stopPrank();
+
+        assertEq(testGroup.groupNameOf(tokenId), expectedGroupName);
+    }
+
+    function testMintWithTestSymbolPrefixExceedsMaxLength() public {
+        MockLOVE20Token testToken = new MockLOVE20Token(
+            "TestToken",
+            "TestToken",
+            MAX_SUPPLY
+        );
+        LOVE20Group testGroup = new LOVE20Group(
+            address(testToken),
+            BASE_DIVISOR,
+            BYTES_THRESHOLD,
+            MULTIPLIER,
+            MAX_GROUP_NAME_LENGTH
+        );
+        testToken.mint(user1, 1_000_000 * 1e18);
+
+        // 61 bytes, after "Test" prefix = 65 bytes > MAX_GROUP_NAME_LENGTH (64)
+        string
+            memory groupName = "1234567890123456789012345678901234567890123456789012345678901";
+        assertEq(bytes(groupName).length, 61);
+
+        vm.startPrank(user1);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ILOVE20GroupErrors.GroupNameTooLong.selector,
+                65,
+                MAX_GROUP_NAME_LENGTH
+            )
+        );
+        testGroup.mint(groupName);
+        vm.stopPrank();
+    }
+
+    // ============ Zero Mint Cost Tests ============
+
+    function testCalculateMintCostWhenUnmintedSupplyIsZero() public {
+        // Fill totalSupply to maxSupply
+        uint256 remaining = MAX_SUPPLY - love20Token.totalSupply();
+        love20Token.mint(address(0xBEEF), remaining);
+
+        assertEq(love20Token.totalSupply(), MAX_SUPPLY);
+
+        string memory groupName = "TestGroup";
+        uint256 mintCost = group.calculateMintCost(groupName);
+        assertEq(mintCost, 0);
+    }
+
+    function testMintWithZeroCost() public {
+        // Fill totalSupply to maxSupply
+        uint256 remaining = MAX_SUPPLY - love20Token.totalSupply();
+        love20Token.mint(address(0xBEEF), remaining);
+
+        string memory groupName = "ZeroCostGroup";
+        uint256 mintCost = group.calculateMintCost(groupName);
+        assertEq(mintCost, 0);
+
+        vm.startPrank(user1);
+        (uint256 tokenId, uint256 returnedCost) = group.mint(groupName);
+        vm.stopPrank();
+
+        assertEq(returnedCost, 0);
+        assertEq(group.ownerOf(tokenId), user1);
+        assertEq(group.groupNameOf(tokenId), groupName);
+        assertEq(group.totalBurnedForMint(), 0);
+    }
+
+    // ============ Holder Tracking Edge Cases ============
+
+    function testHoldersCountUnchangedWhenTransferToExistingHolder() public {
+        string memory groupName1 = "HolderXfer1";
+        string memory groupName2 = "HolderXfer2";
+        string memory groupName3 = "HolderXfer3";
+
+        uint256 mintCost1 = group.calculateMintCost(groupName1);
+        vm.startPrank(user1);
+        love20Token.approve(address(group), mintCost1);
+        (uint256 tokenId1, ) = group.mint(groupName1);
+        vm.stopPrank();
+
+        uint256 mintCost2 = group.calculateMintCost(groupName2);
+        vm.startPrank(user1);
+        love20Token.approve(address(group), mintCost2);
+        group.mint(groupName2);
+        vm.stopPrank();
+
+        uint256 mintCost3 = group.calculateMintCost(groupName3);
+        vm.startPrank(user2);
+        love20Token.approve(address(group), mintCost3);
+        group.mint(groupName3);
+        vm.stopPrank();
+
+        assertEq(group.holdersCount(), 2);
+        assertEq(group.balanceOf(user1), 2);
+        assertEq(group.balanceOf(user2), 1);
+
+        // user1 transfers 1 NFT to user2 (both remain holders)
+        vm.prank(user1);
+        group.transferFrom(user1, user2, tokenId1);
+
+        assertEq(group.holdersCount(), 2);
+        assertEq(group.balanceOf(user1), 1);
+        assertEq(group.balanceOf(user2), 2);
+    }
+
+    function testHolderRejoinAfterTransferAll() public {
+        string memory groupName1 = "RejoinTest1";
+        string memory groupName2 = "RejoinTest2";
+
+        uint256 mintCost1 = group.calculateMintCost(groupName1);
+        vm.startPrank(user1);
+        love20Token.approve(address(group), mintCost1);
+        (uint256 tokenId1, ) = group.mint(groupName1);
+        vm.stopPrank();
+
+        assertEq(group.holdersCount(), 1);
+
+        // Transfer all NFTs away
+        vm.prank(user1);
+        group.transferFrom(user1, user2, tokenId1);
+
+        assertEq(group.holdersCount(), 1);
+        assertEq(group.holdersAtIndex(0), user2);
+        assertEq(group.balanceOf(user1), 0);
+
+        // user1 mints again
+        uint256 mintCost2 = group.calculateMintCost(groupName2);
+        vm.startPrank(user1);
+        love20Token.approve(address(group), mintCost2);
+        group.mint(groupName2);
+        vm.stopPrank();
+
+        assertEq(group.holdersCount(), 2);
+        assertEq(group.balanceOf(user1), 1);
+    }
+
+    // ============ Invalid UTF-8 Encoding Tests ============
+
+    function testCannotMintWithInvalidUTF8OverlongEncoding() public {
+        // 0xC0 0xAF: overlong encoding for U+002F
+        // 0xC0 < 0xC2 -> rejected as invalid start byte
+        bytes memory nameBytes = new bytes(7);
+        nameBytes[0] = bytes1("G");
+        nameBytes[1] = bytes1("r");
+        nameBytes[2] = bytes1("o");
+        nameBytes[3] = bytes1("u");
+        nameBytes[4] = bytes1("p");
+        nameBytes[5] = bytes1(0xC0);
+        nameBytes[6] = bytes1(0xAF);
+
+        vm.startPrank(user1);
+        vm.expectRevert(
+            ILOVE20GroupErrors.GroupNameInvalidCharacters.selector
+        );
+        group.mint(string(nameBytes));
+        vm.stopPrank();
+    }
+
+    function testCannotMintWithInvalidUTF8TruncatedSequence() public {
+        // Start a 3-byte sequence (0xE4) but only provide 1 continuation byte
+        bytes memory nameBytes = new bytes(7);
+        nameBytes[0] = bytes1("G");
+        nameBytes[1] = bytes1("r");
+        nameBytes[2] = bytes1("o");
+        nameBytes[3] = bytes1("u");
+        nameBytes[4] = bytes1("p");
+        nameBytes[5] = bytes1(0xE4);
+        nameBytes[6] = bytes1(0xB8);
+
+        vm.startPrank(user1);
+        vm.expectRevert(
+            ILOVE20GroupErrors.GroupNameInvalidCharacters.selector
+        );
+        group.mint(string(nameBytes));
+        vm.stopPrank();
+    }
+
+    function testCannotMintWithInvalidUTF8ContinuationByte() public {
+        // 3-byte sequence with invalid continuation byte (0x40 not in 0x80-0xBF)
+        bytes memory nameBytes = new bytes(8);
+        nameBytes[0] = bytes1("G");
+        nameBytes[1] = bytes1("r");
+        nameBytes[2] = bytes1("o");
+        nameBytes[3] = bytes1("u");
+        nameBytes[4] = bytes1("p");
+        nameBytes[5] = bytes1(0xE4);
+        nameBytes[6] = bytes1(0xB8);
+        nameBytes[7] = bytes1(0x40);
+
+        vm.startPrank(user1);
+        vm.expectRevert(
+            ILOVE20GroupErrors.GroupNameInvalidCharacters.selector
+        );
+        group.mint(string(nameBytes));
+        vm.stopPrank();
+    }
+
+    function testCannotMintWithUTF16SurrogateCodePoint() public {
+        // U+D800 encodes as 0xED 0xA0 0x80 (rejected: byte2 >= 0xA0)
+        bytes memory nameBytes = new bytes(8);
+        nameBytes[0] = bytes1("G");
+        nameBytes[1] = bytes1("r");
+        nameBytes[2] = bytes1("o");
+        nameBytes[3] = bytes1("u");
+        nameBytes[4] = bytes1("p");
+        nameBytes[5] = bytes1(0xED);
+        nameBytes[6] = bytes1(0xA0);
+        nameBytes[7] = bytes1(0x80);
+
+        vm.startPrank(user1);
+        vm.expectRevert(
+            ILOVE20GroupErrors.GroupNameInvalidCharacters.selector
+        );
+        group.mint(string(nameBytes));
+        vm.stopPrank();
+    }
+
+    function testCannotMintWith4ByteOverlongEncoding() public {
+        // 0xF0 0x80 0x80 0x80: overlong 4-byte (byte2 < 0x90)
+        bytes memory nameBytes = new bytes(9);
+        nameBytes[0] = bytes1("G");
+        nameBytes[1] = bytes1("r");
+        nameBytes[2] = bytes1("o");
+        nameBytes[3] = bytes1("u");
+        nameBytes[4] = bytes1("p");
+        nameBytes[5] = bytes1(0xF0);
+        nameBytes[6] = bytes1(0x80);
+        nameBytes[7] = bytes1(0x80);
+        nameBytes[8] = bytes1(0x80);
+
+        vm.startPrank(user1);
+        vm.expectRevert(
+            ILOVE20GroupErrors.GroupNameInvalidCharacters.selector
+        );
+        group.mint(string(nameBytes));
+        vm.stopPrank();
+    }
+
+    function testCannotMintWithCodePointAbove10FFFF() public {
+        // 0xF4 0x90 0x80 0x80: U+110000 > U+10FFFF (byte2 >= 0x90)
+        bytes memory nameBytes = new bytes(9);
+        nameBytes[0] = bytes1("G");
+        nameBytes[1] = bytes1("r");
+        nameBytes[2] = bytes1("o");
+        nameBytes[3] = bytes1("u");
+        nameBytes[4] = bytes1("p");
+        nameBytes[5] = bytes1(0xF4);
+        nameBytes[6] = bytes1(0x90);
+        nameBytes[7] = bytes1(0x80);
+        nameBytes[8] = bytes1(0x80);
+
+        vm.startPrank(user1);
+        vm.expectRevert(
+            ILOVE20GroupErrors.GroupNameInvalidCharacters.selector
+        );
+        group.mint(string(nameBytes));
+        vm.stopPrank();
+    }
+
+    function testCannotMintWith3ByteOverlongEncoding() public {
+        // 0xE0 0x80 0x80: overlong 3-byte (byte2 < 0xA0)
+        bytes memory nameBytes = new bytes(8);
+        nameBytes[0] = bytes1("G");
+        nameBytes[1] = bytes1("r");
+        nameBytes[2] = bytes1("o");
+        nameBytes[3] = bytes1("u");
+        nameBytes[4] = bytes1("p");
+        nameBytes[5] = bytes1(0xE0);
+        nameBytes[6] = bytes1(0x80);
+        nameBytes[7] = bytes1(0x80);
+
+        vm.startPrank(user1);
+        vm.expectRevert(
+            ILOVE20GroupErrors.GroupNameInvalidCharacters.selector
+        );
+        group.mint(string(nameBytes));
+        vm.stopPrank();
+    }
+
+    function testCannotMintWithLoneContinuationByte() public {
+        // 0x80 as first byte: invalid start byte (0x80-0xBF range)
+        bytes memory nameBytes = new bytes(6);
+        nameBytes[0] = bytes1("G");
+        nameBytes[1] = bytes1("r");
+        nameBytes[2] = bytes1("o");
+        nameBytes[3] = bytes1("u");
+        nameBytes[4] = bytes1("p");
+        nameBytes[5] = bytes1(0x80);
+
+        vm.startPrank(user1);
+        vm.expectRevert(
+            ILOVE20GroupErrors.GroupNameInvalidCharacters.selector
+        );
+        group.mint(string(nameBytes));
+        vm.stopPrank();
+    }
 }
 
 // Mock contract that implements IERC721Receiver
