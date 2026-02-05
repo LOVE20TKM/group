@@ -50,7 +50,7 @@ contract LOVE20Group is ERC721Enumerable, ILOVE20Group {
     /**
      * @param love20Token_ Address of the LOVE20 token
      * @param baseDivisor_ Base divisor for cost calculation (e.g., 1e8)
-     * @param bytesThreshold_ Byte length threshold for cost multiplier (e.g., 8)
+     * @param bytesThreshold_ Byte length threshold for cost multiplier (e.g., 7)
      * @param multiplier_ Multiplier for short names (e.g., 10)
      * @param maxGroupNameLength_ Maximum group name length in bytes (e.g., 64)
      */
