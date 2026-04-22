@@ -3,6 +3,7 @@ pragma solidity =0.8.17;
 
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {IGroupDefaults} from "./interfaces/IGroupDefaults.sol";
+import {ILOVE20Group} from "./interfaces/ILOVE20Group.sol";
 
 contract GroupDefaults is IGroupDefaults {
     address public immutable GROUP_ADDRESS;
@@ -34,7 +35,36 @@ contract GroupDefaults is IGroupDefaults {
         return _effectiveDefaultGroupId(account);
     }
 
-    function _ownerOfOrRevert(uint256 groupId) internal view returns (address owner) {
+    function defaultGroupsOf(
+        address[] calldata accounts
+    )
+        external
+        view
+        returns (uint256[] memory groupIds, string[] memory groupNames)
+    {
+        uint256 length = accounts.length;
+        groupIds = new uint256[](length);
+        groupNames = new string[](length);
+
+        ILOVE20Group group = ILOVE20Group(GROUP_ADDRESS);
+
+        for (uint256 i; i < length; ) {
+            uint256 groupId = _effectiveDefaultGroupId(accounts[i]);
+            groupIds[i] = groupId;
+
+            if (groupId != 0) {
+                groupNames[i] = group.groupNameOf(groupId);
+            }
+
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    function _ownerOfOrRevert(
+        uint256 groupId
+    ) internal view returns (address owner) {
         try IERC721(GROUP_ADDRESS).ownerOf(groupId) returns (address resolved) {
             return resolved;
         } catch {
@@ -49,9 +79,7 @@ contract GroupDefaults is IGroupDefaults {
         if (groupId == 0) {
             return 0;
         }
-        try IERC721(GROUP_ADDRESS).ownerOf(groupId) returns (
-            address owner
-        ) {
+        try IERC721(GROUP_ADDRESS).ownerOf(groupId) returns (address owner) {
             if (owner == account) {
                 return groupId;
             }

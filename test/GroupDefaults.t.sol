@@ -4,9 +4,7 @@ pragma solidity =0.8.17;
 import {Test} from "forge-std/Test.sol";
 import {LOVE20Group} from "../src/LOVE20Group.sol";
 import {GroupDefaults} from "../src/GroupDefaults.sol";
-import {
-    IGroupDefaultsErrors
-} from "../src/interfaces/IGroupDefaults.sol";
+import {IGroupDefaultsErrors} from "../src/interfaces/IGroupDefaults.sol";
 import {MockLOVE20Token} from "./mocks/MockLOVE20Token.sol";
 
 contract GroupDefaultsTest is Test {
@@ -28,13 +26,7 @@ contract GroupDefaultsTest is Test {
         user2 = makeAddr("user2");
 
         love20Token = new MockLOVE20Token("LOVE20", "LOVE", MAX_SUPPLY);
-        group = new LOVE20Group(
-            address(love20Token),
-            BASE_DIVISOR,
-            BYTES_THRESHOLD,
-            MULTIPLIER,
-            MAX_GROUP_NAME_LENGTH
-        );
+        group = new LOVE20Group(address(love20Token), BASE_DIVISOR, BYTES_THRESHOLD, MULTIPLIER, MAX_GROUP_NAME_LENGTH);
         groupDefaults = new GroupDefaults(address(group));
 
         love20Token.mint(user1, 1_000_000 * 1e18);
@@ -58,6 +50,37 @@ contract GroupDefaultsTest is Test {
         assertEq(groupDefaults.defaultGroupIdOf(user1), groupId);
     }
 
+    function testDefaultGroupsOf() public {
+        address user3 = makeAddr("user3");
+        uint256 user1GroupId = _mintGroupFor(user1, "AlphaGroup");
+        uint256 user2GroupId = _mintGroupFor(user2, "BetaGroupX");
+
+        vm.prank(user1);
+        groupDefaults.setDefaultGroupId(user1GroupId);
+
+        vm.prank(user2);
+        groupDefaults.setDefaultGroupId(user2GroupId);
+
+        address[] memory accounts = new address[](3);
+        accounts[0] = user1;
+        accounts[1] = user2;
+        accounts[2] = user3;
+
+        (uint256[] memory groupIds, string[] memory groupNames) = groupDefaults.defaultGroupsOf(accounts);
+
+        assertEq(groupIds.length, 3);
+        assertEq(groupNames.length, 3);
+
+        assertEq(groupIds[0], user1GroupId);
+        assertEq(groupNames[0], "AlphaGroup");
+
+        assertEq(groupIds[1], user2GroupId);
+        assertEq(groupNames[1], "BetaGroupX");
+
+        assertEq(groupIds[2], 0);
+        assertEq(groupNames[2], "");
+    }
+
     function testSetDefaultGroupIdRevertsWhenGroupNotExist() public {
         vm.prank(user1);
         vm.expectRevert(IGroupDefaultsErrors.GroupNotExist.selector);
@@ -77,12 +100,7 @@ contract GroupDefaultsTest is Test {
 
         vm.startPrank(user1);
         groupDefaults.setDefaultGroupId(groupId);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IGroupDefaultsErrors.DefaultGroupIdAlreadySet.selector,
-                groupId
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IGroupDefaultsErrors.DefaultGroupIdAlreadySet.selector, groupId));
         groupDefaults.setDefaultGroupId(groupId);
         vm.stopPrank();
     }
@@ -117,6 +135,27 @@ contract GroupDefaultsTest is Test {
         assertEq(groupDefaults.defaultGroupIdOf(user2), 0);
     }
 
+    function testDefaultGroupsOfReturnsZeroAfterTransfer() public {
+        uint256 groupId = _mintGroupFor(user1, "AlphaGroup");
+
+        vm.prank(user1);
+        groupDefaults.setDefaultGroupId(groupId);
+
+        vm.prank(user1);
+        group.transferFrom(user1, user2, groupId);
+
+        address[] memory accounts = new address[](2);
+        accounts[0] = user1;
+        accounts[1] = user2;
+
+        (uint256[] memory groupIds, string[] memory groupNames) = groupDefaults.defaultGroupsOf(accounts);
+
+        assertEq(groupIds[0], 0);
+        assertEq(groupNames[0], "");
+        assertEq(groupIds[1], 0);
+        assertEq(groupNames[1], "");
+    }
+
     function testOwnerCanSetTransferredGroupAsDefault() public {
         uint256 groupId = _mintGroupFor(user1, "AlphaGroup");
 
@@ -141,15 +180,12 @@ contract GroupDefaultsTest is Test {
         assertEq(groupDefaults.defaultGroupIdOf(user1), secondGroupId);
     }
 
-    function _mintGroupFor(
-        address owner,
-        string memory groupName
-    ) internal returns (uint256 tokenId) {
+    function _mintGroupFor(address owner, string memory groupName) internal returns (uint256 tokenId) {
         uint256 mintCost = group.calculateMintCost(groupName);
 
         vm.startPrank(owner);
         love20Token.approve(address(group), mintCost);
-        (tokenId, ) = group.mint(groupName);
+        (tokenId,) = group.mint(groupName);
         vm.stopPrank();
     }
 }

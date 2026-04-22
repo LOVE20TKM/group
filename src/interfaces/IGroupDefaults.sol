@@ -9,10 +9,7 @@ interface IGroupDefaultsErrors {
 }
 
 interface IGroupDefaultsEvents {
-    event DefaultGroupIdSet(
-        address indexed account,
-        uint256 indexed groupId
-    );
+    event DefaultGroupIdSet(address indexed account, uint256 indexed groupId);
 
     event DefaultGroupIdCleared(
         address indexed account,
@@ -20,17 +17,19 @@ interface IGroupDefaultsEvents {
     );
 }
 
-interface IGroupDefaults is
-    IGroupDefaultsErrors,
-    IGroupDefaultsEvents
-{
+interface IGroupDefaults is IGroupDefaultsErrors, IGroupDefaultsEvents {
     function GROUP_ADDRESS() external view returns (address);
 
     function setDefaultGroupId(uint256 groupId) external;
 
     function clearDefaultGroupId() external;
 
-    function defaultGroupIdOf(
-        address account
-    ) external view returns (uint256);
+    function defaultGroupIdOf(address account) external view returns (uint256);
+
+    function defaultGroupsOf(
+        address[] calldata accounts
+    )
+        external
+        view
+        returns (uint256[] memory groupIds, string[] memory groupNames);
 }
