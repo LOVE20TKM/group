@@ -68,6 +68,37 @@ contract GroupMarketTest is Test {
         new GroupMarket(ILOVE20Group(address(group)), ILOVE20Token(address(0)));
     }
 
+    function testDirectSafeTransferToMarketReverts() public {
+        uint256 tokenId = _mintGroupFor(seller, "MarketDirectSafeTransfer");
+
+        vm.startPrank(seller);
+        vm.expectRevert(bytes("ERC721: transfer to non ERC721Receiver implementer"));
+        group.safeTransferFrom(seller, address(market), tokenId);
+        vm.stopPrank();
+
+        assertEq(group.ownerOf(tokenId), seller);
+    }
+
+    function testForeignSafeTransferToMarketReverts() public {
+        MockLOVE20Token otherToken = new MockLOVE20Token("LOVE20-OTHER", "LOVEO", MAX_SUPPLY);
+        LOVE20Group otherGroup =
+            new LOVE20Group(address(otherToken), BASE_DIVISOR, BYTES_THRESHOLD, MULTIPLIER, MAX_GROUP_NAME_LENGTH);
+
+        otherToken.mint(seller, 1_000_000 * 1e18);
+
+        uint256 mintCost = otherGroup.calculateMintCost("OtherMarketGroup");
+
+        vm.startPrank(seller);
+        otherToken.approve(address(otherGroup), mintCost);
+        (uint256 tokenId,) = otherGroup.mint("OtherMarketGroup");
+
+        vm.expectRevert(bytes("ERC721: transfer to non ERC721Receiver implementer"));
+        otherGroup.safeTransferFrom(seller, address(market), tokenId);
+        vm.stopPrank();
+
+        assertEq(otherGroup.ownerOf(tokenId), seller);
+    }
+
     function testCreateListingAndBuyBurnsFee() public {
         uint256 tokenId = _mintGroupFor(seller, "MarketGroupOne");
         uint256 price = 1_000 * 1e18;

@@ -5,7 +5,6 @@ import {ILOVE20Group} from "./interfaces/ILOVE20Group.sol";
 import {ILOVE20Token} from "./interfaces/ILOVE20Token.sol";
 import {IGroupMarket} from "./interfaces/IGroupMarket.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import {ERC721Holder} from "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
@@ -13,9 +12,11 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 /**
  * @title GroupMarket
  * @notice Marketplace for LOVE20 Group NFTs settled in LOVE20 token
- * @dev 10% trading fee is burned through LOVE20Token, returning it to unminted supply
+ * @dev 10% trading fee is burned through LOVE20Token, returning it to unminted supply.
+ *      This contract intentionally does not implement ERC721Receiver, so direct safeTransferFrom
+ *      calls to the market revert. Listings must go through createListing().
  */
-contract GroupMarket is ERC721Holder, ReentrancyGuard, IGroupMarket {
+contract GroupMarket is ReentrancyGuard, IGroupMarket {
     using EnumerableSet for EnumerableSet.UintSet;
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
@@ -65,7 +66,8 @@ contract GroupMarket is ERC721Holder, ReentrancyGuard, IGroupMarket {
 
         _listings[tokenId] = Listing({seller: msg.sender, price: price});
         _listedTokenIds.add(tokenId);
-        groupNft.safeTransferFrom(msg.sender, address(this), tokenId);
+        // Use transferFrom so escrow still works even though the market rejects direct safe transfers.
+        groupNft.transferFrom(msg.sender, address(this), tokenId);
 
         emit ListingCreated(tokenId, msg.sender, price);
     }
