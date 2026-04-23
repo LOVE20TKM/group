@@ -79,11 +79,6 @@ contract GroupDefaults is IGroupDefaults {
         if (groupId == 0) {
             return 0;
         }
-        try IERC721(GROUP_ADDRESS).ownerOf(groupId) returns (address owner) {
-            if (owner == account) {
-                return groupId;
-            }
-        } catch {}
-        return 0;
+        return IERC721(GROUP_ADDRESS).ownerOf(groupId) == account ? groupId : 0;
     }
 }
