@@ -156,6 +156,26 @@ contract GroupDefaultsTest is Test {
         assertEq(groupNames[1], "");
     }
 
+    function testClearDefaultGroupIdSucceedsAfterTransferInvalidatesEffectiveDefault() public {
+        uint256 groupId = _mintGroupFor(user1, "AlphaGroup");
+
+        vm.prank(user1);
+        groupDefaults.setDefaultGroupId(groupId);
+
+        vm.prank(user1);
+        group.transferFrom(user1, user2, groupId);
+
+        assertEq(groupDefaults.defaultGroupIdOf(user1), 0);
+
+        vm.prank(user1);
+        groupDefaults.clearDefaultGroupId();
+
+        vm.prank(user2);
+        group.transferFrom(user2, user1, groupId);
+
+        assertEq(groupDefaults.defaultGroupIdOf(user1), 0);
+    }
+
     function testOwnerCanSetTransferredGroupAsDefault() public {
         uint256 groupId = _mintGroupFor(user1, "AlphaGroup");
 
