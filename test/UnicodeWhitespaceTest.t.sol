@@ -3,7 +3,7 @@ pragma solidity =0.8.17;
 
 import {Test} from "forge-std/Test.sol";
 import {LOVE20Group} from "../src/LOVE20Group.sol";
-import {ILOVE20Group, ILOVE20GroupErrors} from "../src/interfaces/ILOVE20Group.sol";
+import {ILOVE20GroupErrors} from "../src/interfaces/ILOVE20Group.sol";
 import {MockLOVE20Token} from "./mocks/MockLOVE20Token.sol";
 
 /**

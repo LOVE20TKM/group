@@ -2,13 +2,8 @@
 pragma solidity =0.8.17;
 
 import {Test} from "forge-std/Test.sol";
-import {console2} from "forge-std/console2.sol";
 import {LOVE20Group} from "../src/LOVE20Group.sol";
-import {
-    ILOVE20Group,
-    ILOVE20GroupErrors,
-    ILOVE20GroupEvents
-} from "../src/interfaces/ILOVE20Group.sol";
+import {ILOVE20GroupErrors} from "../src/interfaces/ILOVE20Group.sol";
 import {MockLOVE20Token} from "./mocks/MockLOVE20Token.sol";
 
 /**
@@ -22,7 +17,6 @@ contract LOVE20GroupTest is Test {
     address public user1;
     address public user2;
 
-    uint256 constant INITIAL_SUPPLY = 10_000_000_000 * 1e18; // 10 billion tokens
     uint256 constant MAX_SUPPLY = 21_000_000_000 * 1e18; // 21 billion tokens
 
     // Group parameters (matching default config)
