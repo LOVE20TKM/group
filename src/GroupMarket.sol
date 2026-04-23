@@ -49,19 +49,30 @@ contract GroupMarket is ReentrancyGuard, IGroupMarket {
 
         group = group_;
         love20Token = love20Token_;
-
-        emit Initialized(address(group_), address(love20Token_));
     }
 
     function createListing(uint256 tokenId, uint256 price) external nonReentrant {
-        if (price == 0) revert InvalidAmount();
-        if (_listings[tokenId].seller != address(0)) {
-            revert ListingAlreadyExists(tokenId);
-        }
+        IERC721 groupNft = IERC721(address(group));
+        _createListing({groupNft: groupNft, tokenId: tokenId, price: price});
+    }
+
+    function createListings(uint256[] calldata tokenIds, uint256[] calldata prices) external nonReentrant {
+        if (tokenIds.length != prices.length) revert ArrayLengthMismatch();
 
         IERC721 groupNft = IERC721(address(group));
+        for (uint256 i = 0; i < tokenIds.length; i++) {
+            _createListing({groupNft: groupNft, tokenId: tokenIds[i], price: prices[i]});
+        }
+    }
+
+    function _createListing(IERC721 groupNft, uint256 tokenId, uint256 price) internal {
+        if (price == 0) revert InvalidAmount();
+        if (_listings[tokenId].seller != address(0)) {
+            revert ListingAlreadyExists({tokenId: tokenId});
+        }
+
         if (groupNft.ownerOf(tokenId) != msg.sender) {
-            revert NotTokenOwner(tokenId, msg.sender);
+            revert NotTokenOwner({tokenId: tokenId, caller: msg.sender});
         }
 
         _listings[tokenId] = Listing({seller: msg.sender, price: price});
@@ -69,25 +80,25 @@ contract GroupMarket is ReentrancyGuard, IGroupMarket {
         // Use transferFrom so escrow still works even though the market rejects direct safe transfers.
         groupNft.transferFrom(msg.sender, address(this), tokenId);
 
-        emit ListingCreated(tokenId, msg.sender, price);
+        emit CreateListing({tokenId: tokenId, seller: msg.sender, price: price});
     }
 
     function cancelListing(uint256 tokenId) external nonReentrant {
-        Listing memory listing_ = _requireListing(tokenId);
+        Listing memory listing_ = _requireListing({tokenId: tokenId});
         if (listing_.seller != msg.sender) {
-            revert NotListingSeller(tokenId, msg.sender);
+            revert NotListingSeller({tokenId: tokenId, caller: msg.sender});
         }
 
         delete _listings[tokenId];
         _listedTokenIds.remove(tokenId);
         IERC721(address(group)).safeTransferFrom(address(this), msg.sender, tokenId);
 
-        emit ListingCancelled(tokenId, msg.sender);
+        emit CancelListing({tokenId: tokenId, seller: msg.sender});
     }
 
-    function buy(uint256 tokenId) external nonReentrant {
-        Listing memory listing_ = _requireListing(tokenId);
-        if (listing_.seller == msg.sender) revert CannotBuyOwnListing(tokenId);
+    function buyListing(uint256 tokenId) external nonReentrant {
+        Listing memory listing_ = _requireListing({tokenId: tokenId});
+        if (listing_.seller == msg.sender) revert CannotBuyOwnListing({tokenId: tokenId});
 
         delete _listings[tokenId];
         _listedTokenIds.remove(tokenId);
@@ -97,9 +108,16 @@ contract GroupMarket is ReentrancyGuard, IGroupMarket {
 
         IERC721(address(group)).safeTransferFrom(address(this), msg.sender, tokenId);
 
-        (uint256 fee, uint256 sellerProceeds) = _payoutAndBurn(listing_.seller, listing_.price);
+        (uint256 fee, uint256 sellerProceeds) = _payoutAndBurn({seller: listing_.seller, amount: listing_.price});
 
-        emit ListingPurchased(tokenId, listing_.seller, msg.sender, listing_.price, fee, sellerProceeds);
+        emit BuyListing({
+            tokenId: tokenId,
+            seller: listing_.seller,
+            buyer: msg.sender,
+            price: listing_.price,
+            fee: fee,
+            sellerProceeds: sellerProceeds
+        });
     }
 
     function makeOffer(uint256 tokenId, uint256 amount) external nonReentrant {
@@ -114,15 +132,15 @@ contract GroupMarket is ReentrancyGuard, IGroupMarket {
             if (existingOffer.status == OfferStatus.Pending) {
                 revert PendingOfferMustCancelFirst();
             }
-            if (amount <= previousAmount) revert OfferMustIncrease(previousAmount);
+            if (amount <= previousAmount) revert OfferMustIncrease({currentAmount: previousAmount});
 
             token.safeTransferFrom(msg.sender, address(this), amount - previousAmount);
             existingOffer.amount = amount;
             existingOffer.cancelAvailableBlock = block.number + OFFER_CANCEL_COOLDOWN_BLOCKS;
             existingOffer.status = OfferStatus.Active;
 
-            _refreshOfferExtremes(tokenId);
-            emit OfferUpdated(tokenId, msg.sender, previousAmount, amount);
+            _updateExtremesOnIncrease({tokenId: tokenId, bidder: msg.sender, newAmount: amount});
+            emit UpdateOffer({tokenId: tokenId, bidder: msg.sender, previousAmount: previousAmount, newAmount: amount});
             return;
         }
 
@@ -139,15 +157,18 @@ contract GroupMarket is ReentrancyGuard, IGroupMarket {
                 status: OfferStatus.Active
             });
 
-            _refreshOfferExtremes(tokenId);
-            emit OfferCreated(tokenId, msg.sender, amount);
+            _updateExtremesOnAdd({tokenId: tokenId, newBidder: msg.sender, newAmount: amount});
+            emit MakeOffer({tokenId: tokenId, bidder: msg.sender, amount: amount});
         } else {
             address lowestBidder = _offerExtremes[tokenId].lowestBidder;
             uint256 lowestAmount = _offers[tokenId][lowestBidder].amount;
-            uint256 minimumRequiredAmount = _minimumReplacementAmount(lowestAmount);
+            uint256 minimumRequiredAmount = _minimumReplacementAmount({lowestAmount: lowestAmount});
 
             if (amount < minimumRequiredAmount) {
-                revert OfferBelowMinimumToReplace(lowestAmount, minimumRequiredAmount);
+                revert OfferBelowMinimumToReplace({
+                    currentLowestAmount: lowestAmount,
+                    minimumRequiredAmount: minimumRequiredAmount
+                });
             }
 
             token.safeTransferFrom(msg.sender, address(this), amount);
@@ -164,61 +185,77 @@ contract GroupMarket is ReentrancyGuard, IGroupMarket {
                 status: OfferStatus.Active
             });
 
-            _refreshOfferExtremes(tokenId);
-            emit OfferReplaced(tokenId, lowestBidder, msg.sender, lowestAmount, amount);
+            _refreshOfferExtremes({tokenId: tokenId});
+            emit ReplaceOffer({
+                tokenId: tokenId,
+                displacedBidder: lowestBidder,
+                newBidder: msg.sender,
+                displacedAmount: lowestAmount,
+                newAmount: amount
+            });
         }
     }
 
     function cancelOffer(uint256 tokenId) external nonReentrant {
-        Offer memory offer_ = _requireOffer(tokenId, msg.sender);
+        Offer memory offer_ = _requireOffer({tokenId: tokenId, bidder: msg.sender});
         if (offer_.status == OfferStatus.Active && block.number < offer_.cancelAvailableBlock) {
-            revert OfferCancellationLocked(block.number, offer_.cancelAvailableBlock);
+            revert OfferCancellationLocked({
+                currentBlock: block.number,
+                cancelAvailableBlock: offer_.cancelAvailableBlock
+            });
         }
 
         delete _offers[tokenId][msg.sender];
         _bidderOfferTokenIds[msg.sender].remove(tokenId);
         if (offer_.status == OfferStatus.Active) {
             _offerBidders[tokenId].remove(msg.sender);
-            _refreshOfferExtremes(tokenId);
+            _updateExtremesOnRemove({tokenId: tokenId, removedBidder: msg.sender});
         }
         IERC20(address(love20Token)).safeTransfer(msg.sender, offer_.amount);
 
-        emit OfferCancelled(tokenId, msg.sender, offer_.amount);
+        emit CancelOffer({tokenId: tokenId, bidder: msg.sender, amount: offer_.amount});
     }
 
     function acceptOffer(uint256 tokenId, address bidder) external nonReentrant {
-        if (bidder == msg.sender) revert CannotAcceptOwnOffer(tokenId);
+        if (bidder == msg.sender) revert CannotAcceptOwnOffer({tokenId: tokenId});
 
-        Offer memory offer_ = _requireOffer(tokenId, bidder);
-        if (offer_.status != OfferStatus.Active) revert OfferNotActive(tokenId, bidder);
+        Offer memory offer_ = _requireOffer({tokenId: tokenId, bidder: bidder});
+        if (offer_.status != OfferStatus.Active) revert OfferNotActive({tokenId: tokenId, bidder: bidder});
         delete _offers[tokenId][bidder];
         _bidderOfferTokenIds[bidder].remove(tokenId);
         _offerBidders[tokenId].remove(bidder);
-        _refreshOfferExtremes(tokenId);
+        _updateExtremesOnRemove({tokenId: tokenId, removedBidder: bidder});
 
         Listing memory listing_ = _listings[tokenId];
         IERC721 groupNft = IERC721(address(group));
 
         if (listing_.seller != address(0)) {
             if (listing_.seller != msg.sender) {
-                revert NotListingSeller(tokenId, msg.sender);
+                revert NotListingSeller({tokenId: tokenId, caller: msg.sender});
             }
             delete _listings[tokenId];
             _listedTokenIds.remove(tokenId);
             groupNft.safeTransferFrom(address(this), bidder, tokenId);
         } else {
             if (groupNft.ownerOf(tokenId) != msg.sender) {
-                revert NotTokenOwner(tokenId, msg.sender);
+                revert NotTokenOwner({tokenId: tokenId, caller: msg.sender});
             }
-            if (!_isApproved(groupNft, tokenId, msg.sender)) {
-                revert TokenNotApproved(tokenId);
+            if (!_isApproved({groupNft: groupNft, tokenId: tokenId, owner: msg.sender})) {
+                revert TokenNotApproved({tokenId: tokenId});
             }
             groupNft.safeTransferFrom(msg.sender, bidder, tokenId);
         }
 
-        (uint256 fee, uint256 sellerProceeds) = _payoutAndBurn(msg.sender, offer_.amount);
+        (uint256 fee, uint256 sellerProceeds) = _payoutAndBurn({seller: msg.sender, amount: offer_.amount});
 
-        emit OfferAccepted(tokenId, msg.sender, bidder, offer_.amount, fee, sellerProceeds);
+        emit AcceptOffer({
+            tokenId: tokenId,
+            seller: msg.sender,
+            bidder: bidder,
+            amount: offer_.amount,
+            fee: fee,
+            sellerProceeds: sellerProceeds
+        });
     }
 
     function listing(uint256 tokenId) external view returns (Listing memory) {
@@ -243,7 +280,7 @@ contract GroupMarket is ReentrancyGuard, IGroupMarket {
 
     function listings(uint256 offset, uint256 limit) external view returns (ListingView[] memory page) {
         uint256 total = _listedTokenIds.length();
-        uint256 size = _pageSize(total, offset, limit);
+        uint256 size = _pageSize({total: total, offset: offset, limit: limit});
         page = new ListingView[](size);
 
         for (uint256 i = 0; i < size; i++) {
@@ -260,13 +297,7 @@ contract GroupMarket is ReentrancyGuard, IGroupMarket {
 
         for (uint256 i = 0; i < total; i++) {
             address bidder = bidders.at(i);
-            Offer memory offer_ = _offers[tokenId][bidder];
-            page[i] = OfferView({
-                bidder: bidder,
-                amount: offer_.amount,
-                cancelAvailableBlock: offer_.cancelAvailableBlock,
-                status: offer_.status
-            });
+            page[i] = _offerView({tokenId: tokenId, bidder: bidder});
         }
     }
 
@@ -277,7 +308,7 @@ contract GroupMarket is ReentrancyGuard, IGroupMarket {
     {
         EnumerableSet.UintSet storage tokenIds = _bidderOfferTokenIds[bidder];
         uint256 total = tokenIds.length();
-        uint256 size = _pageSize(total, offset, limit);
+        uint256 size = _pageSize({total: total, offset: offset, limit: limit});
         page = new BidderOfferView[](size);
 
         for (uint256 i = 0; i < size; i++) {
@@ -295,13 +326,19 @@ contract GroupMarket is ReentrancyGuard, IGroupMarket {
     function highestOffer(uint256 tokenId) external view returns (OfferView memory highest) {
         address highestBidder = _offerExtremes[tokenId].highestBidder;
         if (highestBidder != address(0)) {
-            Offer memory offer_ = _offers[tokenId][highestBidder];
-            highest = OfferView({
-                bidder: highestBidder,
-                amount: offer_.amount,
-                cancelAvailableBlock: offer_.cancelAvailableBlock,
-                status: offer_.status
-            });
+            highest = _offerView({tokenId: tokenId, bidder: highestBidder});
+        }
+    }
+
+    function highestOffers(uint256[] calldata tokenIds) external view returns (OfferView[] memory highests) {
+        uint256 total = tokenIds.length;
+        highests = new OfferView[](total);
+
+        for (uint256 i = 0; i < total; i++) {
+            address highestBidder = _offerExtremes[tokenIds[i]].highestBidder;
+            if (highestBidder != address(0)) {
+                highests[i] = _offerView({tokenId: tokenIds[i], bidder: highestBidder});
+            }
         }
     }
 
@@ -310,29 +347,39 @@ contract GroupMarket is ReentrancyGuard, IGroupMarket {
     }
 
     function calculateSellerProceeds(uint256 amount) public pure returns (uint256) {
-        return amount - calculateFee(amount);
+        return amount - calculateFee({amount: amount});
     }
 
     function _requireListing(uint256 tokenId) internal view returns (Listing memory listing_) {
         listing_ = _listings[tokenId];
-        if (listing_.seller == address(0)) revert ListingNotFound(tokenId);
+        if (listing_.seller == address(0)) revert ListingNotExist({tokenId: tokenId});
     }
 
     function _requireOffer(uint256 tokenId, address bidder) internal view returns (Offer memory offer_) {
         offer_ = _offers[tokenId][bidder];
-        if (offer_.amount == 0) revert OfferNotFound(tokenId, bidder);
+        if (offer_.amount == 0) revert OfferNotExist({tokenId: tokenId, bidder: bidder});
     }
 
     function _isApproved(IERC721 groupNft, uint256 tokenId, address owner) internal view returns (bool) {
         return groupNft.getApproved(tokenId) == address(this) || groupNft.isApprovedForAll(owner, address(this));
     }
 
+    function _offerView(uint256 tokenId, address bidder) internal view returns (OfferView memory offerView) {
+        Offer memory offer_ = _offers[tokenId][bidder];
+        offerView = OfferView({
+            bidder: bidder,
+            amount: offer_.amount,
+            cancelAvailableBlock: offer_.cancelAvailableBlock,
+            status: offer_.status
+        });
+    }
+
     function _payoutAndBurn(address seller, uint256 amount) internal returns (uint256 fee, uint256 sellerProceeds) {
-        fee = calculateFee(amount);
+        fee = calculateFee({amount: amount});
         sellerProceeds = amount - fee;
 
         if (fee != 0) {
-            love20Token.burn(fee);
+            love20Token.burn({amount: fee});
         }
 
         if (sellerProceeds != 0) {
@@ -373,6 +420,44 @@ contract GroupMarket is ReentrancyGuard, IGroupMarket {
 
         extremes.highestBidder = highestBidder;
         extremes.lowestBidder = lowestBidder;
+    }
+
+    function _updateExtremesOnAdd(uint256 tokenId, address newBidder, uint256 newAmount) internal {
+        OfferExtremes storage extremes = _offerExtremes[tokenId];
+        if (extremes.highestBidder == address(0)) {
+            extremes.highestBidder = newBidder;
+            extremes.lowestBidder = newBidder;
+            return;
+        }
+        if (newAmount > _offers[tokenId][extremes.highestBidder].amount) {
+            extremes.highestBidder = newBidder;
+        }
+        if (newAmount < _offers[tokenId][extremes.lowestBidder].amount) {
+            extremes.lowestBidder = newBidder;
+        }
+    }
+
+    function _updateExtremesOnIncrease(uint256 tokenId, address bidder, uint256 newAmount) internal {
+        OfferExtremes storage extremes = _offerExtremes[tokenId];
+        if (extremes.lowestBidder == bidder) {
+            _refreshOfferExtremes({tokenId: tokenId});
+            return;
+        }
+        if (newAmount > _offers[tokenId][extremes.highestBidder].amount) {
+            extremes.highestBidder = bidder;
+        }
+    }
+
+    function _updateExtremesOnRemove(uint256 tokenId, address removedBidder) internal {
+        OfferExtremes storage extremes = _offerExtremes[tokenId];
+        if (_offerBidders[tokenId].length() == 0) {
+            extremes.highestBidder = address(0);
+            extremes.lowestBidder = address(0);
+            return;
+        }
+        if (removedBidder == extremes.highestBidder || removedBidder == extremes.lowestBidder) {
+            _refreshOfferExtremes({tokenId: tokenId});
+        }
     }
 
     function _minimumReplacementAmount(uint256 lowestAmount) internal pure returns (uint256) {

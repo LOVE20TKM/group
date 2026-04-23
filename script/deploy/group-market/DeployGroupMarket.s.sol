@@ -25,17 +25,9 @@ contract DeployGroupMarket is Script {
         vm.stopBroadcast();
 
         string memory network = vm.envOr("network", string("anvil"));
-        string memory addressFile = string.concat(
-            "script/network/",
-            network,
-            "/address.group.market.params"
-        );
+        string memory addressFile = string.concat("script/network/", network, "/address.group.market.params");
 
-        string memory content = string.concat(
-            "groupMarketAddress=",
-            vm.toString(address(groupMarket)),
-            "\n"
-        );
+        string memory content = string.concat("groupMarketAddress=", vm.toString(address(groupMarket)), "\n");
 
         vm.writeFile(addressFile, content);
         console2.log("Address saved to:", addressFile);

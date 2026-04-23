@@ -2,24 +2,25 @@
 pragma solidity =0.8.17;
 
 import {Test} from "forge-std/Test.sol";
+import {stdError} from "forge-std/StdError.sol";
 import {LOVE20Group} from "../src/LOVE20Group.sol";
 import {GroupMarket} from "../src/GroupMarket.sol";
 import {ILOVE20Group} from "../src/interfaces/ILOVE20Group.sol";
-import {IGroupMarket} from "../src/interfaces/IGroupMarket.sol";
+import {IGroupMarket, IGroupMarketErrors} from "../src/interfaces/IGroupMarket.sol";
 import {ILOVE20Token} from "../src/interfaces/ILOVE20Token.sol";
-import {IGroupMarketErrors} from "../src/interfaces/IGroupMarket.sol";
 import {MockLOVE20Token} from "./mocks/MockLOVE20Token.sol";
 
-contract GroupMarketTest is Test {
-    struct BidderOfferView {
-        uint256 tokenId;
-        uint256 amount;
-        uint256 cancelAvailableBlock;
-        IGroupMarket.OfferStatus status;
-    }
+contract GroupMarketHarness is GroupMarket {
+    constructor(ILOVE20Group group_, ILOVE20Token love20Token_) GroupMarket(group_, love20Token_) {}
 
+    function exposedMinimumReplacementAmount(uint256 lowestAmount) external pure returns (uint256) {
+        return _minimumReplacementAmount(lowestAmount);
+    }
+}
+
+contract GroupMarketTest is Test {
     LOVE20Group public group;
-    GroupMarket public market;
+    GroupMarketHarness public market;
     MockLOVE20Token public love20Token;
 
     address public seller;
@@ -27,7 +28,6 @@ contract GroupMarketTest is Test {
     address public bidder;
     address public bidder2;
 
-    uint256 constant INITIAL_SUPPLY = 10_000_000_000 * 1e18;
     uint256 constant MAX_SUPPLY = 21_000_000_000 * 1e18;
 
     uint256 constant BASE_DIVISOR = 1e7;
@@ -43,7 +43,7 @@ contract GroupMarketTest is Test {
 
         love20Token = new MockLOVE20Token("LOVE20", "LOVE", MAX_SUPPLY);
         group = new LOVE20Group(address(love20Token), BASE_DIVISOR, BYTES_THRESHOLD, MULTIPLIER, MAX_GROUP_NAME_LENGTH);
-        market = new GroupMarket(ILOVE20Group(address(group)), ILOVE20Token(address(love20Token)));
+        market = new GroupMarketHarness(ILOVE20Group(address(group)), ILOVE20Token(address(love20Token)));
 
         love20Token.mint(seller, 1_000_000 * 1e18);
         love20Token.mint(buyer, 1_000_000 * 1e18);
@@ -120,7 +120,7 @@ contract GroupMarketTest is Test {
 
         vm.startPrank(buyer);
         love20Token.approve(address(market), price);
-        market.buy(tokenId);
+        market.buyListing(tokenId);
         vm.stopPrank();
 
         assertEq(group.ownerOf(tokenId), buyer);
@@ -129,6 +129,99 @@ contract GroupMarketTest is Test {
         assertEq(love20Token.totalSupply(), totalSupplyBefore - fee);
         assertEq(love20Token.balanceOf(address(market)), 0);
         assertEq(market.listing(tokenId).seller, address(0));
+    }
+
+    function testCreateListingsCreatesMultipleListings() public {
+        uint256 tokenId1 = _mintGroupFor(seller, "MarketBatchListOne");
+        uint256 tokenId2 = _mintGroupFor(seller, "MarketBatchListTwo");
+        uint256 tokenId3 = _mintGroupFor(seller, "MarketBatchListThree");
+
+        uint256[] memory tokenIds = new uint256[](3);
+        tokenIds[0] = tokenId1;
+        tokenIds[1] = tokenId2;
+        tokenIds[2] = tokenId3;
+
+        uint256[] memory prices = new uint256[](3);
+        prices[0] = 100 * 1e18;
+        prices[1] = 200 * 1e18;
+        prices[2] = 300 * 1e18;
+
+        vm.startPrank(seller);
+        group.setApprovalForAll(address(market), true);
+        market.createListings(tokenIds, prices);
+        vm.stopPrank();
+
+        assertEq(market.listingCount(), 3);
+        assertEq(group.ownerOf(tokenId1), address(market));
+        assertEq(group.ownerOf(tokenId2), address(market));
+        assertEq(group.ownerOf(tokenId3), address(market));
+        assertEq(market.listing(tokenId1).seller, seller);
+        assertEq(market.listing(tokenId1).price, prices[0]);
+        assertEq(market.listing(tokenId2).seller, seller);
+        assertEq(market.listing(tokenId2).price, prices[1]);
+        assertEq(market.listing(tokenId3).seller, seller);
+        assertEq(market.listing(tokenId3).price, prices[2]);
+    }
+
+    function testCreateListingsRevertsForLengthMismatch() public {
+        uint256 tokenId = _mintGroupFor(seller, "MarketBatchLengthMismatch");
+
+        uint256[] memory tokenIds = new uint256[](1);
+        tokenIds[0] = tokenId;
+
+        uint256[] memory prices = new uint256[](2);
+        prices[0] = 100 * 1e18;
+        prices[1] = 200 * 1e18;
+
+        vm.prank(seller);
+        vm.expectRevert(IGroupMarketErrors.ArrayLengthMismatch.selector);
+        market.createListings(tokenIds, prices);
+    }
+
+    function testCreateListingsRevertsAtomicallyForInvalidPrice() public {
+        uint256 tokenId1 = _mintGroupFor(seller, "MarketBatchAtomicOne");
+        uint256 tokenId2 = _mintGroupFor(seller, "MarketBatchAtomicTwo");
+
+        uint256[] memory tokenIds = new uint256[](2);
+        tokenIds[0] = tokenId1;
+        tokenIds[1] = tokenId2;
+
+        uint256[] memory prices = new uint256[](2);
+        prices[0] = 100 * 1e18;
+        prices[1] = 0;
+
+        vm.startPrank(seller);
+        group.setApprovalForAll(address(market), true);
+        vm.expectRevert(IGroupMarketErrors.InvalidAmount.selector);
+        market.createListings(tokenIds, prices);
+        vm.stopPrank();
+
+        assertEq(market.listingCount(), 0);
+        assertEq(group.ownerOf(tokenId1), seller);
+        assertEq(group.ownerOf(tokenId2), seller);
+        assertEq(market.listing(tokenId1).seller, address(0));
+        assertEq(market.listing(tokenId2).seller, address(0));
+    }
+
+    function testBuyAtMaxPriceRevertsOnFeeOverflow() public {
+        uint256 tokenId = _mintGroupFor(seller, "MarketMaxPrice");
+
+        vm.startPrank(seller);
+        group.approve(address(market), tokenId);
+        market.createListing(tokenId, type(uint256).max);
+        vm.stopPrank();
+
+        deal(address(love20Token), buyer, type(uint256).max);
+
+        vm.startPrank(buyer);
+        love20Token.approve(address(market), type(uint256).max);
+        vm.expectRevert(stdError.arithmeticError);
+        market.buyListing(tokenId);
+        vm.stopPrank();
+
+        assertEq(group.ownerOf(tokenId), address(market));
+        assertEq(market.listing(tokenId).seller, seller);
+        assertEq(market.listing(tokenId).price, type(uint256).max);
     }
 
     function testBuyDoesNotClearBuyerExistingOffer() public {
@@ -149,13 +242,17 @@ contract GroupMarketTest is Test {
         uint256 buyerBalanceBeforeBuy = love20Token.balanceOf(buyer);
 
         vm.prank(buyer);
-        market.buy(tokenId);
+        market.buyListing(tokenId);
 
         assertEq(group.ownerOf(tokenId), buyer);
         assertEq(market.offer(tokenId, buyer).amount, offerAmount);
         assertEq(uint256(market.offer(tokenId, buyer).status), uint256(IGroupMarket.OfferStatus.Active));
         assertEq(love20Token.balanceOf(buyer), buyerBalanceBeforeBuy - price);
         assertEq(love20Token.balanceOf(address(market)), offerAmount);
+
+        vm.prank(buyer);
+        vm.expectRevert(abi.encodeWithSelector(IGroupMarketErrors.CannotAcceptOwnOffer.selector, tokenId));
+        market.acceptOffer(tokenId, buyer);
 
         vm.startPrank(buyer);
         vm.expectRevert(
@@ -173,6 +270,47 @@ contract GroupMarketTest is Test {
 
         assertEq(market.offer(tokenId, buyer).amount, 0);
         assertEq(love20Token.balanceOf(address(market)), 0);
+    }
+
+    function testNewOwnerCanAcceptExistingOfferAfterBuy() public {
+        uint256 tokenId = _mintGroupFor(seller, "MarketBuyThenAcceptOffer");
+        uint256 offerAmount = 700 * 1e18;
+        uint256 price = 1_000 * 1e18;
+        uint256 fee = market.calculateFee(offerAmount);
+        uint256 sellerProceeds = market.calculateSellerProceeds(offerAmount);
+
+        vm.startPrank(bidder);
+        love20Token.approve(address(market), offerAmount);
+        market.makeOffer(tokenId, offerAmount);
+        vm.stopPrank();
+
+        vm.startPrank(seller);
+        group.approve(address(market), tokenId);
+        market.createListing(tokenId, price);
+        vm.stopPrank();
+
+        vm.startPrank(buyer);
+        love20Token.approve(address(market), price);
+        market.buyListing(tokenId);
+        vm.stopPrank();
+
+        assertEq(group.ownerOf(tokenId), buyer);
+        assertEq(market.offer(tokenId, bidder).amount, offerAmount);
+        assertEq(uint256(market.offer(tokenId, bidder).status), uint256(IGroupMarket.OfferStatus.Active));
+
+        uint256 buyerBalanceBeforeAccept = love20Token.balanceOf(buyer);
+        uint256 totalSupplyBeforeAccept = love20Token.totalSupply();
+
+        vm.startPrank(buyer);
+        group.approve(address(market), tokenId);
+        market.acceptOffer(tokenId, bidder);
+        vm.stopPrank();
+
+        assertEq(group.ownerOf(tokenId), bidder);
+        assertEq(love20Token.balanceOf(buyer), buyerBalanceBeforeAccept + sellerProceeds);
+        assertEq(love20Token.totalSupply(), totalSupplyBeforeAccept - fee);
+        assertEq(love20Token.balanceOf(address(market)), 0);
+        assertEq(market.offer(tokenId, bidder).amount, 0);
     }
 
     function testCancelListingReturnsNft() public {
@@ -255,6 +393,43 @@ contract GroupMarketTest is Test {
         assertEq(market.offer(tokenId, bidder).amount, 0);
     }
 
+    function testFuzzCalculateFeeMatchesTenPercent(uint256 amount) public view {
+        amount = bound(amount, 0, type(uint256).max / market.FEE_BPS());
+
+        uint256 fee = market.calculateFee(amount);
+        uint256 sellerProceeds = market.calculateSellerProceeds(amount);
+
+        assertEq(fee, (amount * market.FEE_BPS()) / market.BPS_DENOMINATOR());
+        assertEq(sellerProceeds + fee, amount);
+        assertLe(fee, amount);
+    }
+
+    function testCalculateFeeRevertsForMaxAmount() public {
+        vm.expectRevert(stdError.arithmeticError);
+        market.calculateFee(type(uint256).max);
+    }
+
+    function testFuzzMinimumReplacementAmountMatchesCeilIncrement(uint256 lowestAmount) public view {
+        uint256 maxSafeLowest =
+            (type(uint256).max - (market.BPS_DENOMINATOR() - 1)) / market.MIN_REPLACEMENT_INCREMENT_BPS();
+        lowestAmount = bound(lowestAmount, 0, maxSafeLowest);
+
+        uint256 minimumAmount = market.exposedMinimumReplacementAmount(lowestAmount);
+        uint256 increment = (lowestAmount * market.MIN_REPLACEMENT_INCREMENT_BPS() + market.BPS_DENOMINATOR() - 1)
+            / market.BPS_DENOMINATOR();
+
+        assertEq(minimumAmount, lowestAmount + increment);
+        assertGe(minimumAmount, lowestAmount);
+        if (lowestAmount > 0) {
+            assertGt(minimumAmount, lowestAmount);
+        }
+    }
+
+    function testMinimumReplacementAmountRevertsForMaxAmount() public {
+        vm.expectRevert(stdError.arithmeticError);
+        market.exposedMinimumReplacementAmount(type(uint256).max);
+    }
+
     function testIncreaseOfferOnlyTransfersDelta() public {
         uint256 tokenId = _mintGroupFor(seller, "MarketGroupThreeB");
         uint256 firstAmount = 700 * 1e18;
@@ -335,6 +510,44 @@ contract GroupMarketTest is Test {
         highest = market.highestOffer(tokenId);
         assertEq(highest.bidder, bidder2);
         assertEq(highest.amount, 1_100 * 1e18);
+    }
+
+    function testHighestOffersSupportsBatchQuery() public {
+        uint256 tokenId1 = _mintGroupFor(seller, "MarketBatchOfferOne");
+        uint256 tokenId2 = _mintGroupFor(seller, "MarketBatchOfferTwo");
+        uint256 tokenId3 = _mintGroupFor(seller, "MarketBatchOfferThree");
+
+        vm.startPrank(bidder);
+        love20Token.approve(address(market), 2_000 * 1e18);
+        market.makeOffer(tokenId1, 800 * 1e18);
+        market.makeOffer(tokenId2, 900 * 1e18);
+        vm.stopPrank();
+
+        vm.startPrank(buyer);
+        love20Token.approve(address(market), 1_500 * 1e18);
+        market.makeOffer(tokenId1, 1_100 * 1e18);
+        vm.stopPrank();
+
+        uint256[] memory tokenIds = new uint256[](3);
+        tokenIds[0] = tokenId1;
+        tokenIds[1] = tokenId2;
+        tokenIds[2] = tokenId3;
+
+        IGroupMarket.OfferView[] memory highests = market.highestOffers(tokenIds);
+
+        assertEq(highests.length, 3);
+
+        assertEq(highests[0].bidder, buyer);
+        assertEq(highests[0].amount, 1_100 * 1e18);
+        assertEq(uint256(highests[0].status), uint256(IGroupMarket.OfferStatus.Active));
+
+        assertEq(highests[1].bidder, bidder);
+        assertEq(highests[1].amount, 900 * 1e18);
+        assertEq(uint256(highests[1].status), uint256(IGroupMarket.OfferStatus.Active));
+
+        assertEq(highests[2].bidder, address(0));
+        assertEq(highests[2].amount, 0);
+        assertEq(uint256(highests[2].status), uint256(IGroupMarket.OfferStatus.None));
     }
 
     function testAcceptOfferForListedToken() public {
@@ -508,8 +721,8 @@ contract GroupMarketTest is Test {
 
         uint256 pendingAmount = _makePendingOfferFor(bidder, pendingTokenId);
 
-        BidderOfferView[] memory firstPage = _bidderOffers(bidder, 0, 1);
-        BidderOfferView[] memory secondPage = _bidderOffers(bidder, 1, 2);
+        IGroupMarket.BidderOfferView[] memory firstPage = _bidderOffers(bidder, 0, 1);
+        IGroupMarket.BidderOfferView[] memory secondPage = _bidderOffers(bidder, 1, 2);
 
         assertEq(_bidderOfferCount(bidder), 2);
         assertEq(firstPage.length, 1);
@@ -545,6 +758,43 @@ contract GroupMarketTest is Test {
 
         assertEq(_bidderOfferCount(bidder), 0);
         assertEq(_bidderOffers(bidder, 0, 10).length, 0);
+    }
+
+    function testSameBidderCanCancelOffersAcrossMultipleTokenIds() public {
+        uint256 tokenId1 = _mintGroupFor(seller, "MarketMultiCancelA");
+        uint256 tokenId2 = _mintGroupFor(seller, "MarketMultiCancelB");
+        uint256 tokenId3 = _mintGroupFor(seller, "MarketMultiCancelC");
+        uint256 amount1 = 100 * 1e18;
+        uint256 amount2 = 200 * 1e18;
+        uint256 amount3 = 300 * 1e18;
+        uint256 totalAmount = amount1 + amount2 + amount3;
+        uint256 bidderBalanceBefore = love20Token.balanceOf(bidder);
+
+        vm.startPrank(bidder);
+        love20Token.approve(address(market), totalAmount);
+        market.makeOffer(tokenId1, amount1);
+        market.makeOffer(tokenId2, amount2);
+        market.makeOffer(tokenId3, amount3);
+        vm.stopPrank();
+
+        assertEq(_bidderOfferCount(bidder), 3);
+        assertEq(love20Token.balanceOf(address(market)), totalAmount);
+
+        vm.roll(block.number + market.OFFER_CANCEL_COOLDOWN_BLOCKS());
+
+        vm.startPrank(bidder);
+        market.cancelOffer(tokenId1);
+        market.cancelOffer(tokenId2);
+        market.cancelOffer(tokenId3);
+        vm.stopPrank();
+
+        assertEq(_bidderOfferCount(bidder), 0);
+        assertEq(_bidderOffers(bidder, 0, 10).length, 0);
+        assertEq(market.offer(tokenId1, bidder).amount, 0);
+        assertEq(market.offer(tokenId2, bidder).amount, 0);
+        assertEq(market.offer(tokenId3, bidder).amount, 0);
+        assertEq(love20Token.balanceOf(bidder), bidderBalanceBefore);
+        assertEq(love20Token.balanceOf(address(market)), 0);
     }
 
     function testOwnerCanMakeOfferForOwnToken() public {
@@ -653,22 +903,15 @@ contract GroupMarketTest is Test {
         assertEq(uint256(market.offer(tokenId, pendingBidder).status), uint256(IGroupMarket.OfferStatus.Pending));
     }
 
-    function _bidderOfferCount(address account) internal view returns (uint256 count) {
-        (bool ok, bytes memory data) =
-            address(market).staticcall(abi.encodeWithSignature("bidderOfferCount(address)", account));
-        require(ok, "bidderOfferCount staticcall failed");
-        return abi.decode(data, (uint256));
+    function _bidderOfferCount(address account) internal view returns (uint256) {
+        return market.bidderOfferCount(account);
     }
 
     function _bidderOffers(address account, uint256 offset, uint256 limit)
         internal
         view
-        returns (BidderOfferView[] memory offers)
+        returns (IGroupMarket.BidderOfferView[] memory)
     {
-        (bool ok, bytes memory data) = address(market).staticcall(
-            abi.encodeWithSignature("bidderOffers(address,uint256,uint256)", account, offset, limit)
-        );
-        require(ok, "bidderOffers staticcall failed");
-        return abi.decode(data, (BidderOfferView[]));
+        return market.bidderOffers(account, offset, limit);
     }
 }

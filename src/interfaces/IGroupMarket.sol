@@ -5,13 +5,11 @@ import {ILOVE20Group} from "./ILOVE20Group.sol";
 import {ILOVE20Token} from "./ILOVE20Token.sol";
 
 interface IGroupMarketEvents {
-    event Initialized(address indexed group, address indexed love20Token);
+    event CreateListing(uint256 indexed tokenId, address indexed seller, uint256 price);
 
-    event ListingCreated(uint256 indexed tokenId, address indexed seller, uint256 price);
+    event CancelListing(uint256 indexed tokenId, address indexed seller);
 
-    event ListingCancelled(uint256 indexed tokenId, address indexed seller);
-
-    event ListingPurchased(
+    event BuyListing(
         uint256 indexed tokenId,
         address indexed seller,
         address indexed buyer,
@@ -20,11 +18,11 @@ interface IGroupMarketEvents {
         uint256 sellerProceeds
     );
 
-    event OfferCreated(uint256 indexed tokenId, address indexed bidder, uint256 amount);
+    event MakeOffer(uint256 indexed tokenId, address indexed bidder, uint256 amount);
 
-    event OfferUpdated(uint256 indexed tokenId, address indexed bidder, uint256 previousAmount, uint256 newAmount);
+    event UpdateOffer(uint256 indexed tokenId, address indexed bidder, uint256 previousAmount, uint256 newAmount);
 
-    event OfferReplaced(
+    event ReplaceOffer(
         uint256 indexed tokenId,
         address indexed displacedBidder,
         address indexed newBidder,
@@ -32,9 +30,9 @@ interface IGroupMarketEvents {
         uint256 newAmount
     );
 
-    event OfferCancelled(uint256 indexed tokenId, address indexed bidder, uint256 amount);
+    event CancelOffer(uint256 indexed tokenId, address indexed bidder, uint256 amount);
 
-    event OfferAccepted(
+    event AcceptOffer(
         uint256 indexed tokenId,
         address indexed seller,
         address indexed bidder,
@@ -48,8 +46,8 @@ interface IGroupMarketErrors {
     error InvalidAddress();
     error InvalidAmount();
     error ListingAlreadyExists(uint256 tokenId);
-    error ListingNotFound(uint256 tokenId);
-    error OfferNotFound(uint256 tokenId, address bidder);
+    error ListingNotExist(uint256 tokenId);
+    error OfferNotExist(uint256 tokenId, address bidder);
     error OfferNotActive(uint256 tokenId, address bidder);
     error NotTokenOwner(uint256 tokenId, address caller);
     error NotListingSeller(uint256 tokenId, address caller);
@@ -60,6 +58,7 @@ interface IGroupMarketErrors {
     error OfferCancellationLocked(uint256 currentBlock, uint256 cancelAvailableBlock);
     error OfferBelowMinimumToReplace(uint256 currentLowestAmount, uint256 minimumRequiredAmount);
     error PendingOfferMustCancelFirst();
+    error ArrayLengthMismatch();
 }
 
 interface IGroupMarket is IGroupMarketEvents, IGroupMarketErrors {
@@ -116,9 +115,11 @@ interface IGroupMarket is IGroupMarketEvents, IGroupMarketErrors {
 
     function createListing(uint256 tokenId, uint256 price) external;
 
+    function createListings(uint256[] calldata tokenIds, uint256[] calldata prices) external;
+
     function cancelListing(uint256 tokenId) external;
 
-    function buy(uint256 tokenId) external;
+    function buyListing(uint256 tokenId) external;
 
     function makeOffer(uint256 tokenId, uint256 amount) external;
 
@@ -146,6 +147,8 @@ interface IGroupMarket is IGroupMarketEvents, IGroupMarketErrors {
         returns (BidderOfferView[] memory);
 
     function highestOffer(uint256 tokenId) external view returns (OfferView memory);
+
+    function highestOffers(uint256[] calldata tokenIds) external view returns (OfferView[] memory);
 
     function calculateFee(uint256 amount) external pure returns (uint256);
 
