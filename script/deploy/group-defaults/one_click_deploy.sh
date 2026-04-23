@@ -1,11 +1,19 @@
 #!/bin/bash
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -n "${ZSH_VERSION:-}" ]; then
+    SCRIPT_PATH="$0"
+elif [ -n "${BASH_VERSION:-}" ]; then
+    SCRIPT_PATH="${BASH_SOURCE[0]}"
+else
+    SCRIPT_PATH="$0"
+fi
+
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
 DEPLOY_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 cd "$DEPLOY_DIR" || return 1
 
-echo -e "\n[Step 1/4] Initializing environment..."
+echo -e "\n[Step 1/5] Initializing environment..."
 source "$DEPLOY_DIR/00_init.sh" "$1"
 if [ $? -ne 0 ]; then
     echo -e "\033[31mError:\033[0m Failed to initialize environment"
@@ -17,7 +25,13 @@ echo -e "  One-Click Deploy GroupDefaults"
 echo -e "  Network: $network"
 echo -e "========================================="
 
-echo -e "\n[Step 2/4] Deploying GroupDefaults..."
+echo -e "\n[Step 2/5] Running deployment precheck..."
+if ! source "$SCRIPT_DIR/00_precheck.sh"; then
+    echo -e "\033[31mError:\033[0m Deployment precheck failed"
+    return 1
+fi
+
+echo -e "\n[Step 3/5] Deploying GroupDefaults..."
 source "$SCRIPT_DIR/01_deploy.sh"
 if [ $? -ne 0 ]; then
     echo -e "\033[31mError:\033[0m Deployment failed"
@@ -25,7 +39,7 @@ if [ $? -ne 0 ]; then
 fi
 
 if [[ "$network" == thinkium70001* ]]; then
-    echo -e "\n[Step 3/4] Verifying contract on explorer..."
+    echo -e "\n[Step 4/5] Verifying contract on explorer..."
     source "$SCRIPT_DIR/02_verify.sh"
     if [ $? -ne 0 ]; then
         echo -e "\033[33mWarning:\033[0m Contract verification failed (deployment is still successful)"
@@ -33,10 +47,10 @@ if [[ "$network" == thinkium70001* ]]; then
         echo -e "\033[32m✓\033[0m Contract verified successfully"
     fi
 else
-    echo -e "\n[Step 3/4] Skipping contract verification (not a thinkium network)"
+    echo -e "\n[Step 4/5] Skipping contract verification (not a thinkium network)"
 fi
 
-echo -e "\n[Step 4/4] Running deployment checks..."
+echo -e "\n[Step 5/5] Running deployment checks..."
 source "$SCRIPT_DIR/99_check.sh"
 if [ $? -ne 0 ]; then
     echo -e "\033[31mError:\033[0m Deployment checks failed"

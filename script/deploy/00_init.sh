@@ -52,10 +52,40 @@ else
 fi
 
 # ------ Request keystore password ------
-echo -e "\nPlease enter keystore password (for $KEYSTORE_ACCOUNT):"
-read -s KEYSTORE_PASSWORD
-export KEYSTORE_PASSWORD
-echo "Password saved, will not be requested again in this session"
+request_keystore_password() {
+    if [ -n "$KEYSTORE_PASSWORD" ] && [ "$KEYSTORE_PASSWORD_ACCOUNT" = "$KEYSTORE_ACCOUNT" ]; then
+        return 0
+    fi
+
+    unset KEYSTORE_PASSWORD
+    unset KEYSTORE_PASSWORD_ACCOUNT
+
+    if ! command -v osascript >/dev/null 2>&1; then
+        echo -e "\033[31mError:\033[0m osascript not found, cannot open password dialog"
+        echo "Set KEYSTORE_PASSWORD and KEYSTORE_PASSWORD_ACCOUNT in the environment if you need non-GUI execution."
+        return 1
+    fi
+
+    local escaped_keystore_account
+    escaped_keystore_account=$(printf '%s' "$KEYSTORE_ACCOUNT" | sed 's/\\/\\\\/g; s/"/\\"/g')
+
+    KEYSTORE_PASSWORD="$(osascript <<APPLESCRIPT
+text returned of (display dialog "Enter keystore password for $escaped_keystore_account:" default answer "" with hidden answer buttons {"Cancel", "OK"} default button "OK")
+APPLESCRIPT
+)"
+    local dialog_status=$?
+
+    if [ $dialog_status -ne 0 ] || [ -z "$KEYSTORE_PASSWORD" ]; then
+        echo -e "\033[31mError:\033[0m Keystore password input cancelled"
+        return 1
+    fi
+
+    export KEYSTORE_PASSWORD
+    export KEYSTORE_PASSWORD_ACCOUNT="$KEYSTORE_ACCOUNT"
+    echo "Password captured from dialog, will not be requested again in this session"
+}
+
+request_keystore_password || return 1
 
 cast_call() {
     local address=$1

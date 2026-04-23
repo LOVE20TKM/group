@@ -1,6 +1,14 @@
 #!/bin/bash
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -n "${ZSH_VERSION:-}" ]; then
+    SCRIPT_PATH="$0"
+elif [ -n "${BASH_VERSION:-}" ]; then
+    SCRIPT_PATH="${BASH_SOURCE[0]}"
+else
+    SCRIPT_PATH="$0"
+fi
+
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
 DEPLOY_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 cd "$DEPLOY_DIR" || return 1
@@ -21,6 +29,14 @@ fi
 if [ -z "$groupAddress" ]; then
     echo -e "\033[31mError:\033[0m groupAddress not set"
     return 1
+fi
+
+current_precheck_key="${network}|${RPC_URL}|${groupAddress}"
+
+if [ "$GROUP_DEFAULTS_PRECHECK_DONE" != "1" ] || [ "$GROUP_DEFAULTS_PRECHECK_KEY" != "$current_precheck_key" ]; then
+    if ! source "$SCRIPT_DIR/00_precheck.sh"; then
+        return 1
+    fi
 fi
 
 export GROUP_ADDRESS="$groupAddress"
