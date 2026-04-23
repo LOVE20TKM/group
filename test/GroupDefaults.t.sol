@@ -118,7 +118,7 @@ contract GroupDefaultsTest is Test {
 
     function testClearDefaultGroupIdRevertsWhenNotStored() public {
         vm.prank(user1);
-        vm.expectRevert(IGroupDefaultsErrors.DefaultGroupIdNotStored.selector);
+        vm.expectRevert(IGroupDefaultsErrors.DefaultGroupIdNotSet.selector);
         groupDefaults.clearDefaultGroupId();
     }
 

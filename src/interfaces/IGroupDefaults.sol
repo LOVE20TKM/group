@@ -5,16 +5,13 @@ interface IGroupDefaultsErrors {
     error GroupNotExist();
     error SenderNotGroupOwner();
     error DefaultGroupIdAlreadySet(uint256 groupId);
-    error DefaultGroupIdNotStored();
+    error DefaultGroupIdNotSet();
 }
 
 interface IGroupDefaultsEvents {
-    event DefaultGroupIdSet(address indexed account, uint256 indexed groupId);
+    event SetDefaultGroupId(address indexed account, uint256 indexed groupId);
 
-    event DefaultGroupIdCleared(
-        address indexed account,
-        uint256 indexed prevGroupId
-    );
+    event ClearDefaultGroupId(address indexed account, uint256 indexed prevGroupId);
 }
 
 interface IGroupDefaults is IGroupDefaultsErrors, IGroupDefaultsEvents {
@@ -26,9 +23,7 @@ interface IGroupDefaults is IGroupDefaultsErrors, IGroupDefaultsEvents {
 
     function defaultGroupIdOf(address account) external view returns (uint256);
 
-    function defaultGroupsOf(
-        address[] calldata accounts
-    )
+    function defaultGroupsOf(address[] calldata accounts)
         external
         view
         returns (uint256[] memory groupIds, string[] memory groupNames);

@@ -21,17 +21,9 @@ contract DeployGroupDefaults is Script {
         vm.stopBroadcast();
 
         string memory network = vm.envOr("network", string("anvil"));
-        string memory addressFile = string.concat(
-            "script/network/",
-            network,
-            "/address.group.defaults.params"
-        );
+        string memory addressFile = string.concat("script/network/", network, "/address.group.defaults.params");
 
-        string memory content = string.concat(
-            "groupDefaultsAddress=",
-            vm.toString(address(groupDefaults)),
-            "\n"
-        );
+        string memory content = string.concat("groupDefaultsAddress=", vm.toString(address(groupDefaults)), "\n");
 
         vm.writeFile(addressFile, content);
         console2.log("Address saved to:", addressFile);

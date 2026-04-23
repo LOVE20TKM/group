@@ -15,29 +15,27 @@ contract GroupDefaults is IGroupDefaults {
     }
 
     function setDefaultGroupId(uint256 groupId) external {
-        address senderOwner = _ownerOfOrRevert(groupId);
+        address senderOwner = _ownerOfOrRevert({groupId: groupId});
         if (msg.sender != senderOwner) revert SenderNotGroupOwner();
         if (_defaultGroupIds[msg.sender] == groupId) {
-            revert DefaultGroupIdAlreadySet(groupId);
+            revert DefaultGroupIdAlreadySet({groupId: groupId});
         }
         _defaultGroupIds[msg.sender] = groupId;
-        emit DefaultGroupIdSet(msg.sender, groupId);
+        emit SetDefaultGroupId({account: msg.sender, groupId: groupId});
     }
 
     function clearDefaultGroupId() external {
         uint256 prevGroupId = _defaultGroupIds[msg.sender];
-        if (prevGroupId == 0) revert DefaultGroupIdNotStored();
+        if (prevGroupId == 0) revert DefaultGroupIdNotSet();
         delete _defaultGroupIds[msg.sender];
-        emit DefaultGroupIdCleared(msg.sender, prevGroupId);
+        emit ClearDefaultGroupId({account: msg.sender, prevGroupId: prevGroupId});
     }
 
     function defaultGroupIdOf(address account) external view returns (uint256) {
-        return _effectiveDefaultGroupId(account);
+        return _effectiveDefaultGroupId({account: account});
     }
 
-    function defaultGroupsOf(
-        address[] calldata accounts
-    )
+    function defaultGroupsOf(address[] calldata accounts)
         external
         view
         returns (uint256[] memory groupIds, string[] memory groupNames)
@@ -48,8 +46,8 @@ contract GroupDefaults is IGroupDefaults {
 
         ILOVE20Group group = ILOVE20Group(GROUP_ADDRESS);
 
-        for (uint256 i; i < length; ) {
-            uint256 groupId = _effectiveDefaultGroupId(accounts[i]);
+        for (uint256 i; i < length;) {
+            uint256 groupId = _effectiveDefaultGroupId({account: accounts[i]});
             groupIds[i] = groupId;
 
             if (groupId != 0) {
@@ -62,9 +60,7 @@ contract GroupDefaults is IGroupDefaults {
         }
     }
 
-    function _ownerOfOrRevert(
-        uint256 groupId
-    ) internal view returns (address owner) {
+    function _ownerOfOrRevert(uint256 groupId) internal view returns (address owner) {
         try IERC721(GROUP_ADDRESS).ownerOf(groupId) returns (address resolved) {
             return resolved;
         } catch {
@@ -72,9 +68,7 @@ contract GroupDefaults is IGroupDefaults {
         }
     }
 
-    function _effectiveDefaultGroupId(
-        address account
-    ) internal view returns (uint256 groupId) {
+    function _effectiveDefaultGroupId(address account) internal view returns (uint256 groupId) {
         groupId = _defaultGroupIds[account];
         if (groupId == 0) {
             return 0;
