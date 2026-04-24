@@ -22,6 +22,12 @@
 - 价值发现：稀缺和有意义的名称具有增值潜力
 - 交易市场：去中心化的NFT交易市场，支持NFT挂单、报价交易
 
+## 查询接口注意事项
+
+- `ownerOf`、`balanceOf`、`tokenByIndex`、`tokenOfOwnerByIndex` 是 NFT 所有权和枚举的权威查询依据。
+- `holdersCount`、`holdersAtIndex` 仅供前端展示或辅助观察参考，不应作为任何链上业务、分配、治理、白名单、权限判断或资金结算的依据。
+- 如需获得可靠持有人列表，应基于 `Transfer` 事件索引，或通过 `tokenByIndex + ownerOf` 重建。
+
 ## 文档
 
 - [名称校验规则](./docs/名称校验规则.md)
