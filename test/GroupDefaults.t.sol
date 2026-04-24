@@ -4,10 +4,10 @@ pragma solidity =0.8.17;
 import {Test} from "forge-std/Test.sol";
 import {LOVE20Group} from "../src/LOVE20Group.sol";
 import {GroupDefaults} from "../src/GroupDefaults.sol";
-import {IGroupDefaultsErrors} from "../src/interfaces/IGroupDefaults.sol";
+import {IGroupDefaultsErrors, IGroupDefaultsEvents} from "../src/interfaces/IGroupDefaults.sol";
 import {MockLOVE20Token} from "./mocks/MockLOVE20Token.sol";
 
-contract GroupDefaultsTest is Test {
+contract GroupDefaultsTest is Test, IGroupDefaultsEvents {
     LOVE20Group public group;
     GroupDefaults public groupDefaults;
     MockLOVE20Token public love20Token;
@@ -45,6 +45,8 @@ contract GroupDefaultsTest is Test {
         uint256 groupId = _mintGroupFor(user1, "AlphaGroup");
 
         vm.prank(user1);
+        vm.expectEmit(true, true, false, true);
+        emit SetDefaultGroupId(user1, groupId);
         groupDefaults.setDefaultGroupId(groupId);
 
         assertEq(groupDefaults.defaultGroupIdOf(user1), groupId);
@@ -110,6 +112,8 @@ contract GroupDefaultsTest is Test {
 
         vm.startPrank(user1);
         groupDefaults.setDefaultGroupId(groupId);
+        vm.expectEmit(true, true, false, true);
+        emit ClearDefaultGroupId(user1, groupId);
         groupDefaults.clearDefaultGroupId();
         vm.stopPrank();
 
@@ -168,6 +172,8 @@ contract GroupDefaultsTest is Test {
         assertEq(groupDefaults.defaultGroupIdOf(user1), 0);
 
         vm.prank(user1);
+        vm.expectEmit(true, true, false, true);
+        emit ClearDefaultGroupId(user1, groupId);
         groupDefaults.clearDefaultGroupId();
 
         vm.prank(user2);
@@ -194,6 +200,8 @@ contract GroupDefaultsTest is Test {
 
         vm.startPrank(user1);
         groupDefaults.setDefaultGroupId(firstGroupId);
+        vm.expectEmit(true, true, false, true);
+        emit SetDefaultGroupId(user1, secondGroupId);
         groupDefaults.setDefaultGroupId(secondGroupId);
         vm.stopPrank();
 
