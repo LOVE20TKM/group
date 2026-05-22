@@ -37,7 +37,7 @@ interface IGroupDelegate is IGroupDelegateErrors, IGroupDelegateEvents {
 
     function isDelegatorWhitelistEnabled(uint256 delegateId) external view returns (bool);
 
-    function canDelegateTo(uint256 groupId, uint256 delegateId) external view returns (bool);
+    function canSetDelegateTo(uint256 groupId, uint256 delegateId) external view returns (bool);
 
     function allowedDelegatorGroupIds(uint256 delegateId, uint256 offset, uint256 limit)
         external

@@ -82,12 +82,12 @@ contract GroupDelegateTest is Test, IGroupDelegateEvents {
         assertEq(delegateIds[1], 0);
     }
 
-    function testCanDelegateToZeroDelegateId() public view {
-        assertTrue(groupDelegate.canDelegateTo(groupId, 0));
+    function testCanSetDelegateToZeroDelegateId() public view {
+        assertTrue(groupDelegate.canSetDelegateTo(groupId, 0));
     }
 
-    function testCanDelegateToSelfReturnsFalse() public view {
-        assertTrue(!groupDelegate.canDelegateTo(groupId, groupId));
+    function testCanSetDelegateToSelfReturnsFalse() public view {
+        assertTrue(!groupDelegate.canSetDelegateTo(groupId, groupId));
     }
 
     function testDelegatedGroupIdsReturnsRawListWithEffectiveness() public {
@@ -175,7 +175,7 @@ contract GroupDelegateTest is Test, IGroupDelegateEvents {
 
     function testDelegatorWhitelistIsDisabledByDefault() public {
         assertTrue(!groupDelegate.isDelegatorWhitelistEnabled(delegateId));
-        assertTrue(groupDelegate.canDelegateTo(groupId, delegateId));
+        assertTrue(groupDelegate.canSetDelegateTo(groupId, delegateId));
 
         vm.prank(owner);
         groupDelegate.setDelegateId(groupId, delegateId);
@@ -192,7 +192,7 @@ contract GroupDelegateTest is Test, IGroupDelegateEvents {
         groupDelegate.setDelegatorWhitelistEnabled(delegateId, true);
 
         assertTrue(groupDelegate.isDelegatorWhitelistEnabled(delegateId));
-        assertTrue(!groupDelegate.canDelegateTo(groupId, delegateId));
+        assertTrue(!groupDelegate.canSetDelegateTo(groupId, delegateId));
 
         vm.prank(owner);
         vm.expectRevert(IGroupDelegateErrors.DelegatorGroupIdNotAllowed.selector);
@@ -210,10 +210,13 @@ contract GroupDelegateTest is Test, IGroupDelegateEvents {
         groupDelegate.setAllowedDelegatorGroupIds(delegateId, allowedGroupIds, true);
         vm.stopPrank();
 
-        assertTrue(groupDelegate.canDelegateTo(groupId, delegateId));
+        assertTrue(groupDelegate.canSetDelegateTo(groupId, delegateId));
         vm.prank(owner);
         groupDelegate.setDelegateId(groupId, delegateId);
+        vm.prank(owner);
+        groupDelegate.setDelegateId(secondGroupId, delegateId);
         assertEq(groupDelegate.delegateIdOf(groupId), delegateId);
+        assertEq(groupDelegate.delegateIdOf(secondGroupId), delegateId);
 
         (uint256[] memory firstPage, uint256 total) = groupDelegate.allowedDelegatorGroupIds(delegateId, 0, 1);
         assertEq(total, 2);
@@ -232,11 +235,13 @@ contract GroupDelegateTest is Test, IGroupDelegateEvents {
         emit SetAllowedDelegatorGroupId(delegateId, groupId, delegateOwner, false);
         groupDelegate.setAllowedDelegatorGroupIds(delegateId, removeGroupIds, false);
 
-        assertTrue(!groupDelegate.canDelegateTo(groupId, delegateId));
-        assertEq(groupDelegate.delegateIdOf(groupId), delegateId);
+        assertTrue(!groupDelegate.canSetDelegateTo(groupId, delegateId));
+        assertEq(groupDelegate.delegateIdOf(groupId), 0);
+        assertEq(groupDelegate.delegateIdOf(secondGroupId), delegateId);
+        assertEq(groupDelegate.ownerOrDelegateIdOf(groupId, delegateOwner), 0);
     }
 
-    function testSameDelegateNoopAfterWhitelistRemoval() public {
+    function testWhitelistRemovalTemporarilyDisablesDelegateAndRestoresOnReallow() public {
         uint256[] memory allowedGroupIds = new uint256[](1);
         allowedGroupIds[0] = groupId;
 
@@ -251,21 +256,37 @@ contract GroupDelegateTest is Test, IGroupDelegateEvents {
         vm.prank(delegateOwner);
         groupDelegate.setAllowedDelegatorGroupIds(delegateId, allowedGroupIds, false);
 
-        assertTrue(!groupDelegate.canDelegateTo(groupId, delegateId));
+        assertTrue(!groupDelegate.canSetDelegateTo(groupId, delegateId));
+        assertEq(groupDelegate.delegateIdOf(groupId), 0);
+        assertEq(groupDelegate.ownerOrDelegateIdOf(groupId, delegateOwner), 0);
+        assertTrue(!groupDelegate.isOwnerOrDelegate(groupId, delegateOwner));
+        (uint256[] memory rawGroups, bool[] memory effectiveGroups, uint256 total) =
+            groupDelegate.delegatedGroupIds(delegateId, 0, 10);
+        assertEq(total, 1);
+        assertEq(rawGroups.length, 1);
+        assertEq(effectiveGroups.length, 1);
+        assertEq(rawGroups[0], groupId);
+        assertTrue(!effectiveGroups[0]);
 
         vm.recordLogs();
         vm.prank(owner);
         groupDelegate.setDelegateId(groupId, delegateId);
 
         assertEq(vm.getRecordedLogs().length, 0);
-        assertEq(groupDelegate.delegateIdOf(groupId), delegateId);
+        assertEq(groupDelegate.delegateIdOf(groupId), 0);
         assertEq(groupDelegate.delegatedGroupIdsCount(delegateId), 1);
+
+        vm.prank(delegateOwner);
+        groupDelegate.setAllowedDelegatorGroupIds(delegateId, allowedGroupIds, true);
+
+        assertEq(groupDelegate.delegateIdOf(groupId), delegateId);
+        assertEq(groupDelegate.ownerOrDelegateIdOf(groupId, delegateOwner), delegateId);
     }
 
     function testDelegateOwnerCanDisableDelegatorWhitelist() public {
         vm.prank(delegateOwner);
         groupDelegate.setDelegatorWhitelistEnabled(delegateId, true);
-        assertTrue(!groupDelegate.canDelegateTo(groupId, delegateId));
+        assertTrue(!groupDelegate.canSetDelegateTo(groupId, delegateId));
 
         vm.prank(delegateOwner);
         vm.expectEmit(true, true, true, true);
@@ -273,7 +294,7 @@ contract GroupDelegateTest is Test, IGroupDelegateEvents {
         groupDelegate.setDelegatorWhitelistEnabled(delegateId, false);
 
         assertTrue(!groupDelegate.isDelegatorWhitelistEnabled(delegateId));
-        assertTrue(groupDelegate.canDelegateTo(groupId, delegateId));
+        assertTrue(groupDelegate.canSetDelegateTo(groupId, delegateId));
     }
 
     function testDelegatePolicyNoopsDoNotEmit() public {
@@ -346,6 +367,40 @@ contract GroupDelegateTest is Test, IGroupDelegateEvents {
 
         vm.prank(other);
         group.transferFrom(other, owner, groupId);
+
+        assertEq(groupDelegate.delegateIdOf(groupId), delegateId);
+        assertEq(groupDelegate.ownerOrDelegateIdOf(groupId, delegateOwner), delegateId);
+    }
+
+    function testDelegateInvalidatesAndRestoresAcrossDelegateTransfer() public {
+        vm.prank(owner);
+        groupDelegate.setDelegateId(groupId, delegateId);
+
+        vm.prank(delegateOwner);
+        group.transferFrom(delegateOwner, other, delegateId);
+
+        assertEq(groupDelegate.delegateIdOf(groupId), 0);
+        assertEq(groupDelegate.ownerOrDelegateIdOf(groupId, delegateOwner), 0);
+        assertEq(groupDelegate.ownerOrDelegateIdOf(groupId, other), 0);
+
+        vm.prank(owner);
+        vm.expectEmit(true, true, true, true);
+        emit SetDelegateId(groupId, owner, delegateId, 0);
+        groupDelegate.setDelegateId(groupId, delegateId);
+
+        assertEq(groupDelegate.delegateIdOf(groupId), delegateId);
+        assertEq(groupDelegate.ownerOrDelegateIdOf(groupId, delegateOwner), 0);
+        assertEq(groupDelegate.ownerOrDelegateIdOf(groupId, other), delegateId);
+
+        vm.prank(other);
+        group.transferFrom(other, delegateOwner, delegateId);
+
+        assertEq(groupDelegate.delegateIdOf(groupId), 0);
+        assertEq(groupDelegate.ownerOrDelegateIdOf(groupId, delegateOwner), 0);
+        assertEq(groupDelegate.ownerOrDelegateIdOf(groupId, other), 0);
+
+        vm.prank(owner);
+        groupDelegate.setDelegateId(groupId, delegateId);
 
         assertEq(groupDelegate.delegateIdOf(groupId), delegateId);
         assertEq(groupDelegate.ownerOrDelegateIdOf(groupId, delegateOwner), delegateId);
@@ -434,10 +489,10 @@ contract GroupDelegateTest is Test, IGroupDelegateEvents {
         groupDelegate.isDelegatorWhitelistEnabled(999999);
 
         vm.expectRevert(IGroupDelegateErrors.GroupNotExist.selector);
-        groupDelegate.canDelegateTo(999999, delegateId);
+        groupDelegate.canSetDelegateTo(999999, delegateId);
 
         vm.expectRevert(IGroupDelegateErrors.GroupNotExist.selector);
-        groupDelegate.canDelegateTo(groupId, 999999);
+        groupDelegate.canSetDelegateTo(groupId, 999999);
 
         vm.expectRevert(IGroupDelegateErrors.GroupNotExist.selector);
         groupDelegate.allowedDelegatorGroupIds(999999, 0, 10);

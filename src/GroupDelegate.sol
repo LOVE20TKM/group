@@ -11,6 +11,7 @@ contract GroupDelegate is IGroupDelegate {
     struct DelegateState {
         uint256 delegateId;
         address ownerSnapshot;
+        address delegateOwnerSnapshot;
     }
 
     mapping(uint256 => DelegateState) internal _delegateStates;
@@ -36,7 +37,11 @@ contract GroupDelegate is IGroupDelegate {
 
         DelegateState storage state = _delegateStates[groupId];
         address targetOwnerSnapshot = delegateId == 0 ? address(0) : owner;
-        if (state.delegateId == delegateId && state.ownerSnapshot == targetOwnerSnapshot) {
+        address targetDelegateOwnerSnapshot = delegateId == 0 ? address(0) : _ownerOfOrRevert(delegateId);
+        if (
+            state.delegateId == delegateId && state.ownerSnapshot == targetOwnerSnapshot
+                && state.delegateOwnerSnapshot == targetDelegateOwnerSnapshot
+        ) {
             return;
         }
 
@@ -45,7 +50,7 @@ contract GroupDelegate is IGroupDelegate {
             revert DelegatorGroupIdNotAllowed();
         }
 
-        uint256 prevDelegateId = _delegateIdOf(state, owner);
+        uint256 prevDelegateId = _delegateIdOf(groupId, state, owner);
         uint256 prevRawDelegateId = state.delegateId;
         if (prevRawDelegateId != 0 && prevRawDelegateId != delegateId) {
             _removeDelegatedGroupId(prevRawDelegateId, groupId);
@@ -56,6 +61,7 @@ contract GroupDelegate is IGroupDelegate {
 
         state.delegateId = delegateId;
         state.ownerSnapshot = targetOwnerSnapshot;
+        state.delegateOwnerSnapshot = targetDelegateOwnerSnapshot;
         emit SetDelegateId(groupId, owner, delegateId, prevDelegateId);
     }
 
@@ -71,6 +77,7 @@ contract GroupDelegate is IGroupDelegate {
             if (state.delegateId == delegateId) {
                 state.delegateId = 0;
                 state.ownerSnapshot = address(0);
+                state.delegateOwnerSnapshot = address(0);
                 _removeDelegatedGroupId(delegateId, groupIds[i]);
                 emit ClearDelegatedGroupId(groupIds[i], delegateId, delegateOwner);
             }
@@ -134,7 +141,7 @@ contract GroupDelegate is IGroupDelegate {
         return _delegatorWhitelistEnabled[delegateId];
     }
 
-    function canDelegateTo(uint256 groupId, uint256 delegateId) external view returns (bool) {
+    function canSetDelegateTo(uint256 groupId, uint256 delegateId) external view returns (bool) {
         uint256 groupSupply = _groupSupply();
         _validateGroupExists(groupId, groupSupply);
         if (delegateId == 0) {
@@ -178,7 +185,7 @@ contract GroupDelegate is IGroupDelegate {
 
     function delegateIdOf(uint256 groupId) external view returns (uint256) {
         address owner = _ownerOfOrRevert(groupId);
-        return _delegateIdOf(_delegateStates[groupId], owner);
+        return _delegateIdOf(groupId, _delegateStates[groupId], owner);
     }
 
     function delegateIdsOf(uint256[] calldata groupIds) external view returns (uint256[] memory delegateIds) {
@@ -195,7 +202,7 @@ contract GroupDelegate is IGroupDelegate {
 
             DelegateState storage state = _delegateStates[groupId];
             if (state.delegateId != 0) {
-                delegateIds[i] = _delegateIdOf(state, _ownerOfOrRevert(groupId));
+                delegateIds[i] = _delegateIdOf(groupId, state, _ownerOfOrRevert(groupId));
             }
 
             unchecked {
@@ -251,7 +258,7 @@ contract GroupDelegate is IGroupDelegate {
             return groupId;
         }
 
-        uint256 delegateId = _delegateIdOf(_delegateStates[groupId], owner);
+        uint256 delegateId = _delegateIdOf(groupId, _delegateStates[groupId], owner);
         if (delegateId != 0 && account == _ownerOfOrRevert(delegateId)) {
             return delegateId;
         }
@@ -267,14 +274,28 @@ contract GroupDelegate is IGroupDelegate {
 
     function _isEffectiveDelegateId(uint256 groupId, uint256 delegateId) internal view returns (bool) {
         address owner = _ownerOfOrRevert(groupId);
-        return _delegateIdOf(_delegateStates[groupId], owner) == delegateId;
+        return _delegateIdOf(groupId, _delegateStates[groupId], owner) == delegateId;
     }
 
-    function _delegateIdOf(DelegateState storage state, address owner) internal view returns (uint256) {
+    function _delegateIdOf(uint256 groupId, DelegateState storage state, address owner)
+        internal
+        view
+        returns (uint256)
+    {
         if (state.ownerSnapshot != owner) {
             return 0;
         }
-        return state.delegateId;
+        uint256 delegateId = state.delegateId;
+        if (delegateId == 0) {
+            return 0;
+        }
+        if (state.delegateOwnerSnapshot != _ownerOfOrRevert(delegateId)) {
+            return 0;
+        }
+        if (!_canDelegateTo(groupId, delegateId)) {
+            return 0;
+        }
+        return delegateId;
     }
 
     function _validateDelegateId(uint256 groupId, uint256 delegateId) internal view {
