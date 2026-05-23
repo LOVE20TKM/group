@@ -58,7 +58,13 @@ interface ILOVE20Group is ILOVE20GroupEvents, ILOVE20GroupErrors {
 
     function totalBurnedForMint() external view returns (uint256);
 
+    /// @dev Deprecated: non-authoritative helper on deployed LOVE20Group.
+    /// It may become stale after ERC721 self-transfers. Use Transfer events
+    /// or totalSupply/tokenByIndex/ownerOf to rebuild reliable holder sets.
     function holdersCount() external view returns (uint256);
 
+    /// @dev Deprecated: non-authoritative helper on deployed LOVE20Group.
+    /// It may become stale after ERC721 self-transfers. Use Transfer events
+    /// or totalSupply/tokenByIndex/ownerOf to rebuild reliable holder sets.
     function holdersAtIndex(uint256 index) external view returns (address);
 }

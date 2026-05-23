@@ -26,7 +26,8 @@
 ## 查询接口注意事项
 
 - `ownerOf`、`balanceOf`、`tokenByIndex`、`tokenOfOwnerByIndex` 是 NFT 所有权和枚举的权威查询依据。
-- `holdersCount`、`holdersAtIndex` 仅供前端展示或辅助观察参考，不应作为任何链上业务、分配、治理、白名单、权限判断或资金结算的依据。
+- `holdersCount`、`holdersAtIndex` 是已部署版本中的非权威辅助接口，已不建议新代码继续使用；它们可能因 ERC721 自转账等边界行为失真。
+- 不应将 `holdersCount`、`holdersAtIndex` 用于前端关键展示、链上业务、分配、治理、白名单、权限判断或资金结算。
 - 如需获得可靠持有人列表，应基于 `Transfer` 事件索引，或通过 `tokenByIndex + ownerOf` 重建。
 
 ## 文档

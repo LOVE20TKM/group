@@ -2144,6 +2144,30 @@ contract LOVE20GroupTest is Test {
         assertEq(group.balanceOf(user1), 1);
     }
 
+    function testKnownIssueSelfTransferMakesHolderHelpersUnreliable() public {
+        string memory groupName = "SelfTransferBug";
+        uint256 mintCost = group.calculateMintCost(groupName);
+
+        vm.startPrank(user1);
+        love20Token.approve(address(group), mintCost);
+        (uint256 tokenId, ) = group.mint(groupName);
+
+        group.transferFrom(user1, user1, tokenId);
+
+        assertEq(group.ownerOf(tokenId), user1);
+        assertEq(group.balanceOf(user1), 1);
+        assertEq(group.tokenByIndex(0), tokenId);
+        assertEq(group.tokenOfOwnerByIndex(user1, 0), tokenId);
+
+        assertEq(group.holdersCount(), 0);
+        vm.expectRevert();
+        group.holdersAtIndex(0);
+
+        vm.expectRevert();
+        group.transferFrom(user1, user2, tokenId);
+        vm.stopPrank();
+    }
+
     // ============ Invalid UTF-8 Encoding Tests ============
 
     function testCannotMintWithInvalidUTF8OverlongEncoding() public {

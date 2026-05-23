@@ -105,11 +105,8 @@ echo -e "\033[32m✓\033[0m Group: totalBurnedForMint"
 echo -e "  Actual: $actual_burned"
 echo ""
 
-# Check holdersCount
-actual_holders_count=$(cast_call $groupAddress "holdersCount()(uint256)")
-echo -e "\033[32m✓\033[0m Group: holdersCount"
-echo -e "  Actual: $actual_holders_count"
-echo ""
+# holdersCount/holdersAtIndex are deprecated non-authoritative helpers on the
+# deployed Group contract. Do not include them in deployment health checks.
 
 # Summary
 echo "========================================="
