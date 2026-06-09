@@ -51,6 +51,10 @@ else
     return 1
 fi
 
+if [ -f "$network_dir/address.group.params" ]; then
+    source "$network_dir/address.group.params"
+fi
+
 # ------ Request keystore password ------
 request_keystore_password() {
     if [ -n "$KEYSTORE_PASSWORD" ] && [ "$KEYSTORE_PASSWORD_ACCOUNT" = "$KEYSTORE_ACCOUNT" ]; then
@@ -85,7 +89,17 @@ APPLESCRIPT
     echo "Password captured from dialog, will not be requested again in this session"
 }
 
-request_keystore_password || return 1
+if [ "$network" = "anvil" ]; then
+    if [ -z "$PRIVATE_KEY" ]; then
+        echo -e "\033[31mError:\033[0m PRIVATE_KEY is required for anvil deployment."
+        return 1
+    fi
+    export KEYSTORE_PASSWORD="${KEYSTORE_PASSWORD:-}"
+    export KEYSTORE_PASSWORD_ACCOUNT="$KEYSTORE_ACCOUNT"
+    echo "Using PRIVATE_KEY from anvil .account"
+else
+    request_keystore_password || return 1
+fi
 
 cast_call() {
     local address=$1
@@ -128,15 +142,31 @@ echo "check_equal() loaded"
 
 ## Using keystore file method
 forge_script() {
-  forge script "$@" \
-    --rpc-url $RPC_URL \
-    --account $KEYSTORE_ACCOUNT \
-    --sender $ACCOUNT_ADDRESS \
-    --password "$KEYSTORE_PASSWORD" \
-    --gas-price 5000000000 \
-    --gas-limit 50000000 \
-    --broadcast \
-    --legacy \
-    $([[ "$network" != "anvil" ]] && [[ "$network" != thinkium* ]] && echo "--verify --etherscan-api-key $ETHERSCAN_API_KEY")
+  if [ "$network" = "anvil" ]; then
+    local anvil_build_args=()
+    [ -n "$ANVIL_FOUNDRY_OUT" ] && anvil_build_args+=(--out "$ANVIL_FOUNDRY_OUT")
+    [ -n "$ANVIL_FOUNDRY_CACHE" ] && anvil_build_args+=(--cache-path "$ANVIL_FOUNDRY_CACHE")
+
+    forge script "$@" \
+      --rpc-url $RPC_URL \
+      --private-key "$PRIVATE_KEY" \
+      --sender $ACCOUNT_ADDRESS \
+      --gas-price 5000000000 \
+      --gas-limit 50000000 \
+      --broadcast \
+      --legacy \
+      "${anvil_build_args[@]}"
+  else
+    forge script "$@" \
+      --rpc-url $RPC_URL \
+      --account $KEYSTORE_ACCOUNT \
+      --sender $ACCOUNT_ADDRESS \
+      --password "$KEYSTORE_PASSWORD" \
+      --gas-price 5000000000 \
+      --gas-limit 50000000 \
+      --broadcast \
+      --legacy \
+      $([[ "$network" != thinkium* ]] && echo "--verify --etherscan-api-key $ETHERSCAN_API_KEY")
+  fi
 }
 echo "forge_script() loaded"

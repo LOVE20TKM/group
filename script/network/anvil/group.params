@@ -8,7 +8,7 @@ LOVE20_TOKEN_ADDRESS=0x75537828f2ce51be7289709686A69CbFDbB714F1
 
 # Base divisor for mint cost calculation
 # Cost = (unminted LOVE20) / BASE_DIVISOR
-BASE_DIVISOR=10000000  # 1e7
+BASE_DIVISOR=10000000
 
 # Byte length threshold for cost multiplier
 # Names >= this length only pay base cost
@@ -20,5 +20,3 @@ MULTIPLIER=10
 
 # Maximum group name length in bytes
 MAX_GROUP_NAME_LENGTH=64
-
-
