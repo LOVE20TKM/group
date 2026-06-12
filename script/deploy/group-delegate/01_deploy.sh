@@ -31,12 +31,10 @@ if [ -z "$groupAddress" ]; then
     return 1
 fi
 
-current_precheck_key="${network}|${RPC_URL}|${groupAddress}"
-
-if [ "$GROUP_DELEGATE_PRECHECK_DONE" != "1" ] || [ "$GROUP_DELEGATE_PRECHECK_KEY" != "$current_precheck_key" ]; then
-    if ! source "$SCRIPT_DIR/00_precheck.sh"; then
-        return 1
-    fi
+group_code=$(cast code "$groupAddress" --rpc-url "$RPC_URL" 2>/dev/null)
+if [ $? -ne 0 ] || [ -z "$group_code" ] || [ "$group_code" = "0x" ]; then
+    echo -e "\033[31mError:\033[0m No contract code found at groupAddress"
+    return 1
 fi
 
 export GROUP_ADDRESS="$groupAddress"
